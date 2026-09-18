@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""Base-model ERP depth for every step of a sequence -> outputs/pred/<scene>/<seq>.npz
+"""Base-model ERP depth for every step of a sequence -> outputs/pred/<mode>/<scene>/<seq>.npz
 
 The base model is imported from its sibling checkout (ECHO_DEPTH_ROOT, default
-../hear360 relative to this repository) and run exactly as its own
-sequence-inference script does: the eight binaural channels of a step in the
-order [000 L,R | 090 L,R | 180 L,R | 270 L,R], magnitude STFT (n_fft 512,
+../hear360 relative to this repository) and run as its own sequence-inference
+script does. --mode r2 (default) feeds the front binaural pair only, the
+two channels [000 L,R], to the base model's 2-observation checkpoint; --mode r8
+feeds all four headings [000 L,R | 090 L,R | 180 L,R | 270 L,R] to the
+8-observation one. Magnitude STFT (n_fft 512,
 win 400, hop --hop), first 256 bins, nearest-resized to 256x512, view poses
 from the checkpoint's mode. The hop is sweepable; the trained recipe is 160 and
 every output records the hop it was produced with.
@@ -66,10 +68,12 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--scene", required=True)
     ap.add_argument("--seq", required=True)
-    ap.add_argument("--ckpt", default="comparison/oaa_r8_fin/best.pth", help="relative to ECHO_DEPTH_ROOT")
+    ap.add_argument("--mode", default="r2", choices=["r2", "r8"],
+                    help="r2: the front binaural pair only [000 L,R] (2 channels); r8: all four headings (8 channels)")
+    ap.add_argument("--ckpt", default=None, help="relative to ECHO_DEPTH_ROOT; default the base model's final run for --mode")
     ap.add_argument("--hop", type=int, default=160)
     ap.add_argument("--dropout-samples", type=int, default=0)
-    ap.add_argument("--dropout-kmax", type=int, default=4, help="at most this many of the 8 observations zeroed per sample")
+    ap.add_argument("--dropout-kmax", type=int, default=None, help="at most this many observations zeroed per sample (default half)")
     ap.add_argument("--gpu", default="0")
     ap.add_argument("--out-dir", type=Path, default=REPO / "outputs" / "pred")
     ap.add_argument("--seed", type=int, default=0)
@@ -77,7 +81,13 @@ def main() -> int:
     os.environ["CUDA_VISIBLE_DEVICES"] = a.gpu
     import torch
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if a.ckpt is None:
+        a.ckpt = {"r2": "comparison/oaa_r2_fin/best.pth", "r8": "comparison/oaa_r8_fin/best.pth"}[a.mode]
+    nch = {"r2": 2, "r8": 8}[a.mode]
+    if a.dropout_kmax is None:
+        a.dropout_kmax = nch // 2
     model, poses, args, DM = load_base_model(a.ckpt, device)
+    assert len(poses) == nch, f"checkpoint has {len(poses)} observations, --mode {a.mode} needs {nch}"
     md = float(args.get("max_depth", 10.0))
     window = int(DM.WINDOW)
     S = Sequence(a.scene, a.seq)
@@ -86,7 +96,7 @@ def main() -> int:
     t0 = time.time()
     with torch.no_grad():
         for i in S.steps:
-            x = spec8(S.wav8(i, window), a.hop, device)
+            x = spec8(S.wav8(i, window)[:nch], a.hop, device)      # channel order [000 L,R | 090 | 180 | 270]
             with torch.autocast("cuda", dtype=torch.bfloat16):
                 D = model(x, view_poses=poses).float() * md
             preds.append(D[0, 0].cpu().numpy().astype(np.float16)); steps.append(i)
@@ -94,19 +104,19 @@ def main() -> int:
                 runs = []
                 for _ in range(a.dropout_samples):
                     k = int(rng.integers(1, a.dropout_kmax + 1))
-                    drop = rng.choice(8, size=k, replace=False)
+                    drop = rng.choice(nch, size=k, replace=False)
                     xd = x.clone(); xd[:, drop] = 0
                     with torch.autocast("cuda", dtype=torch.bfloat16):
                         runs.append((model(xd, view_poses=poses).float() * md)[0, 0].cpu().numpy())
                 stds.append(np.std(np.stack(runs), 0).astype(np.float16))
-    out = a.out_dir / a.scene / f"{a.seq}.npz"
+    out = a.out_dir / a.mode / a.scene / f"{a.seq}.npz"
     out.parent.mkdir(parents=True, exist_ok=True)
-    meta = dict(scene=a.scene, seq=a.seq, ckpt=a.ckpt, base_root=str(BASE_ROOT), hop=a.hop, max_depth=md,
+    meta = dict(scene=a.scene, seq=a.seq, mode=a.mode, n_obs=nch, ckpt=a.ckpt, base_root=str(BASE_ROOT), hop=a.hop, max_depth=md,
                 window=window, dropout_samples=a.dropout_samples, dropout_kmax=a.dropout_kmax, seed=a.seed,
                 seconds=round(time.time() - t0, 1), n_steps=len(steps))
     np.savez_compressed(out, pred=np.stack(preds), steps=np.array(steps),
                         std=(np.stack(stds) if stds else np.zeros((0,))), meta=json.dumps(meta))
-    print(f"wrote {out}  {len(steps)} steps, hop {a.hop}, {meta['seconds']} s")
+    print(f"wrote {out}  {len(steps)} steps, mode {a.mode}, hop {a.hop}, {meta['seconds']} s")
     return 0
 
 

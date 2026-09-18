@@ -55,8 +55,9 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--scene", required=True)
     ap.add_argument("--seq", required=True)
-    ap.add_argument("--pred-dir", type=Path, default=REPO / "outputs" / "pred")
-    ap.add_argument("--out-dir", type=Path, default=REPO / "outputs" / "fusion")
+    ap.add_argument("--mode", default="r2")
+    ap.add_argument("--pred-dir", type=Path, default=None)
+    ap.add_argument("--out-dir", type=Path, default=None)
     ap.add_argument("--voxel", type=float, default=0.1)
     ap.add_argument("--trunc", type=float, default=0.3)
     ap.add_argument("--tau", type=float, default=0.2)
@@ -64,6 +65,8 @@ def main() -> int:
     ap.add_argument("--stride", type=int, default=2, help="pixel stride on the 256x512 prediction")
     ap.add_argument("--convention", default="right0")
     a = ap.parse_args()
+    a.pred_dir = a.pred_dir or REPO / "outputs" / "pred" / a.mode
+    a.out_dir = a.out_dir or REPO / "outputs" / "fusion" / a.mode
     z = np.load(a.pred_dir / a.scene / f"{a.seq}.npz")
     pred = z["pred"].astype(np.float32); steps = z["steps"].tolist(); meta = json.loads(str(z["meta"]))
     std = z["std"].astype(np.float32) if z["std"].size else None
