@@ -242,3 +242,70 @@ can use that disagreement. That is the mechanism steps 3 and 5 are for.
 hop 160, so hops 40, 80 and 320 are off-distribution and every one of them is
 worse. The sweep therefore cannot say whether the input's time resolution sets
 the blur width; answering that needs a model retrained at each hop.
+
+
+## Step 3: three-state agreement, and restricting support to separated views
+
+**Why.** Counting how many views put a point in a voxel cannot express
+disagreement: a view that saw straight *through* a voxel contributes nothing to
+it. Step 2 said the errors are fine-grained and view-dependent, so views that
+disagree ought to be informative. And since steps are 0.15 m apart, neighbouring
+views might share a bias, in which case their agreement is not evidence and
+dropping them should help.
+
+**What was done.** Every voxel of the uniform fusion is projected into every
+view's predicted depth map and classified as supported (the view's depth along
+that direction lands within tol of the voxel's range), contradicted (the view
+sees further, so it asserts free space) or unobserved (the view sees something
+nearer, or the direction is out of range; never penalised). Views that put a
+point in the voxel are excluded from its own score, so the score is what *other*
+views say. Scores: the plain count, the count restricted to views at least delta
+apart along the trajectory, supported − contradicted, the supported ratio, and
+count − contradicted. Measured against the voxel's true distance to the
+reference by Spearman, and by the accuracy of ranking with it. 39 sequences,
+tol swept over 0.15 / 0.30 / 0.50 m, offline and causal (only views before the
+voxel's first contributor).
+
+**Result.** Spearman with the true error, more negative is better, tol 0.5 m:
+
+| score | delta 0 | 0.3 | 0.6 | 1.0 | 2.0 |
+|---|---|---|---|---|---|
+| count, all views | −0.339 | −0.339 | −0.339 | −0.339 | −0.339 |
+| count, delta-restricted | −0.339 | −0.260 | −0.223 | −0.206 | −0.180 |
+| supported − contradicted | −0.294 | −0.273 | −0.248 | −0.240 | −0.199 |
+| supported ratio | −0.255 | −0.247 | −0.233 | −0.229 | −0.197 |
+| count − contradicted | −0.311 | −0.278 | −0.247 | −0.238 | −0.196 |
+
+Accuracy of the top quarter by each score (delta 0): count 0.355 m
+(completeness 0.441), count − contradicted 0.370 (0.410), supported −
+contradicted 0.399 (0.583), supported ratio 0.443 (0.552), oracle 0.076 (0.275).
+Recovery against the oracle is 0.00 for the count and negative for every
+agreement score.
+
+The tolerance matters and points the same way: supported − contradicted improves
+from −0.202 at tol 0.15 m to −0.286 at 0.30 and −0.301 at 0.50 (one scene), so
+the band has to be as wide as the prediction error before agreement means
+anything, and even then it stays below the count. Causal is worse still
+(supported − contradicted −0.141, supported ratio −0.079), as expected when only
+the views before a voxel's first contributor may speak.
+
+**Reading.** Two hypotheses tested, both negative. Restricting support to
+separated views never helps: every score degrades monotonically with delta, so
+there is no evidence here that neighbouring steps are inflating support with a
+shared bias. (Confounded: a larger delta also leaves fewer views, hence a
+coarser ranking, so this is not a clean test of shared bias alone.) And
+three-state agreement, in every form tried, ranks worse than simply counting
+points, and adding contradictions to the count makes it worse rather than
+better.
+
+The reason is visible in step 2. A contradiction is one view asserting, through
+a single noisy depth value, that a voxel is free. With per-ray errors around
+0.3 m that assertion is wrong about as often as it is right, so the signal is
+error against error and it cannot tell "you are wrong" from "I am wrong".
+Counting works better because it is a coincidence test: several views
+independently placing a point in the same 10 cm voxel is unlikely by chance,
+while one view's free-space claim is a single noisy number. So the usable signal
+here is coincidence of independent assertions, not contradiction, and a
+hand-built three-state rule is the wrong shape for it. That argues for weighting
+both kinds of evidence by their reliability rather than counting states, which
+is what steps 4 and 5 do.
