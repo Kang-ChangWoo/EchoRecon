@@ -1,1 +1,49 @@
 [apartment_2/seq_0000] steps 37 ERP MAE 0.61 single acc 0.60 fused-all acc 0.83 top25 0.33
+[apartment_2/seq_0001] steps 45 ERP MAE 0.50 single acc 0.54 fused-all acc 0.81 top25 0.30
+[apartment_2/seq_0002] steps 24 ERP MAE 0.58 single acc 0.74 fused-all acc 1.01 top25 0.43
+[apartment_2/seq_0003] steps 31 ERP MAE 0.60 single acc 1.18 fused-all acc 1.59 top25 0.48
+[apartment_2/seq_0004] steps 42 ERP MAE 0.61 single acc 1.15 fused-all acc 1.60 top25 0.51
+[apartment_2/seq_0005] steps 18 ERP MAE 0.49 single acc 0.32 fused-all acc 0.39 top25 0.26
+[apartment_2/seq_0006] steps 18 ERP MAE 0.53 single acc 0.67 fused-all acc 0.91 top25 0.38
+[apartment_2/seq_0007] steps 30 ERP MAE 0.62 single acc 0.64 fused-all acc 0.91 top25 0.34
+[apartment_2/seq_0008] steps 23 ERP MAE 0.62 single acc 0.84 fused-all acc 1.11 top25 0.43
+[apartment_2/seq_0009] steps 25 ERP MAE 0.59 single acc 0.50 fused-all acc 0.74 top25 0.28
+[apartment_2/seq_0010] steps 21 ERP MAE 0.61 single acc 0.47 fused-all acc 0.61 top25 0.27
+[apartment_2/seq_0011] steps 15 ERP MAE 0.54 single acc 0.59 fused-all acc 0.73 top25 0.41
+[frl_apartment_5/seq_0000] steps 15 ERP MAE 0.72 single acc 0.63 fused-all acc 0.71 top25 0.41
+[frl_apartment_5/seq_0001] steps 16 ERP MAE 0.39 single acc 0.48 fused-all acc 0.54 top25 0.41
+[frl_apartment_5/seq_0002] steps 60 ERP MAE 0.41 single acc 0.49 fused-all acc 0.49 top25 0.48
+[frl_apartment_5/seq_0003] steps 14 ERP MAE 0.67 single acc 0.68 fused-all acc 0.69 top25 0.62
+[frl_apartment_5/seq_0004] steps 15 ERP MAE 0.55 single acc 0.55 fused-all acc 0.57 top25 0.46
+[frl_apartment_5/seq_0005] steps 33 ERP MAE 0.42 single acc 0.43 fused-all acc 0.48 top25 0.35
+[frl_apartment_5/seq_0006] steps 18 ERP MAE 0.40 single acc 0.45 fused-all acc 0.48 top25 0.38
+[frl_apartment_5/seq_0007] steps 29 ERP MAE 0.45 single acc 0.50 fused-all acc 0.47 top25 0.46
+[frl_apartment_5/seq_0008] steps 24 ERP MAE 0.33 single acc 0.30 fused-all acc 0.45 top25 0.20
+[frl_apartment_5/seq_0009] steps 34 ERP MAE 0.50 single acc 0.54 fused-all acc 0.58 top25 0.45
+[frl_apartment_5/seq_0010] steps 32 ERP MAE 0.62 single acc 0.63 fused-all acc 0.64 top25 0.52
+[frl_apartment_5/seq_0011] steps 18 ERP MAE 0.30 single acc 0.28 fused-all acc 0.38 top25 0.19
+[frl_apartment_5/seq_0012] steps 15 ERP MAE 0.71 single acc 0.62 fused-all acc 0.69 top25 0.41
+[frl_apartment_5/seq_0013] steps 16 ERP MAE 0.61 single acc 0.59 fused-all acc 0.64 top25 0.46
+[frl_apartment_5/seq_0014] steps 44 ERP MAE 0.60 single acc 0.56 fused-all acc 0.60 top25 0.47
+[office_4/seq_0000] steps 15 ERP MAE 0.40 single acc 0.35 fused-all acc 0.44 top25 0.27
+[office_4/seq_0001] steps 14 ERP MAE 0.36 single acc 0.31 fused-all acc 0.36 top25 0.27
+[office_4/seq_0002] steps 16 ERP MAE 0.36 single acc 0.31 fused-all acc 0.37 top25 0.25
+[office_4/seq_0003] steps 16 ERP MAE 0.39 single acc 0.34 fused-all acc 0.43 top25 0.25
+[office_4/seq_0004] steps 18 ERP MAE 0.42 single acc 0.33 fused-all acc 0.40 top25 0.26
+[office_4/seq_0005] steps 21 ERP MAE 0.37 single acc 0.33 fused-all acc 0.40 top25 0.25
+[office_4/seq_0006] steps 16 ERP MAE 0.41 single acc 0.35 fused-all acc 0.44 top25 0.27
+[office_4/seq_0007] steps 23 ERP MAE 0.46 single acc 0.37 fused-all acc 0.46 top25 0.29
+[office_4/seq_0008] steps 15 ERP MAE 0.45 single acc 0.40 fused-all acc 0.49 top25 0.28
+[office_4/seq_0009] steps 19 ERP MAE 0.41 single acc 0.34 fused-all acc 0.39 top25 0.28
+[office_4/seq_0010] steps 14 ERP MAE 0.47 single acc 0.42 fused-all acc 0.52 top25 0.32
+[office_4/seq_0011] steps 24 ERP MAE 0.42 single acc 0.36 fused-all acc 0.45 top25 0.28
+# Fusion over the held-out sequences, mode r2, hop 160
+
+Mean over sequences. acc = mean nearest distance predicted->reference (m) / fraction within 0.2 m; comp = reference->predicted (m).
+
+| scene | seqs | ERP MAE | single acc | fused all acc | uniform top50 / top25 | range-prior top50 / top25 | model-std top50 / top25 | comp all / top25 |
+|---|---|---|---|---|---|---|---|---|
+| apartment_2 | 12 | 0.57 | 0.69/24% | 0.94/17% | 0.56/24% / 0.37/31% | 0.50/25% / 0.36/31% | 0.61/24% / 0.41/30% | 0.65 / 1.03 |
+| frl_apartment_5 | 15 | 0.51 | 0.52/31% | 0.56/27% | 0.46/34% / 0.42/39% | 0.45/34% / 0.42/39% | 0.49/33% / 0.45/36% | 0.31 / 0.78 |
+| office_4 | 12 | 0.41 | 0.35/36% | 0.43/30% | 0.32/37% / 0.27/41% | 0.32/37% / 0.27/41% | 0.34/36% / 0.28/41% | 0.25 / 0.69 |
+| all | 39 | 0.50 | 0.52/30% | 0.64/25% | 0.45/32% / 0.36/37% | 0.43/32% / 0.36/37% | 0.48/31% / 0.39/36% | 0.40 / 0.83 |

@@ -108,29 +108,33 @@ right* ("right0") and for 25-37 % under the other three. So the ground-truth
 depths of a sequence do fuse into one consistent 3D model, and "right0" is the
 default convention from here on.
 
-## Step-2 result so far (one sequence, preliminary)
+## Step-2 result so far (front binaural pair, all held-out sequences)
 
-apartment_2/seq_0000, 37 steps, base model at its trained hop (160), 256x512
-predictions, 0.1 m voxels, tau = 0.2 m, reference = the fused ground truth of the
-same steps.
+Observation set: the front binaural pair only (`--mode r2`, the base model's
+2-observation checkpoint), trained hop 160, 256x512 predictions, 0.1 m voxels,
+tau = 0.2 m, reference = fused ground truth of the same steps. Mean over the 39
+sequences of the three held-out scenes (`outputs/summary_r2.md`):
 
-| model | acc (mean NN, m) | acc < 0.2 m | completeness (m) |
+| model | acc (m) | acc < 0.2 m | comp (m) |
 |---|---|---|---|
-| single step, voxelised, mean over steps | 0.565 | 26 % | 1.745 |
-| fused, all voxels (uniform = range-prior = model-std) | 0.840 | 19 % | 0.579 |
-| fused, top 50 % voxels by weight sum: uniform / range-prior / model-std | 0.46 / 0.42 / 0.43 | 28 / 29 / 29 % | 0.65 / 0.67 / 0.70 |
-| fused, top 25 %: uniform / range-prior / model-std | 0.31 / 0.30 / 0.29 | 34 / 35 / 36 % | 0.82 / 0.84 / 0.87 |
+| single step, voxelised, mean over steps | 0.52 | 30 % | – |
+| fused, all voxels | 0.64 | 25 % | 0.40 |
+| fused, top 50 % voxels by weight sum: uniform / range-prior / model-std | 0.45 / 0.43 / 0.48 | 32 / 32 / 31 % | |
+| fused, top 25 %: uniform / range-prior / model-std | 0.36 / 0.36 / 0.39 | 37 / 37 / 36 % | 0.83 |
 
-Per-step ERP MAE against the ground truth is 0.56 m on this sequence.
+Per-step ERP MAE against the ground truth: 0.50 m (apartment_2 0.57,
+frl_apartment_5 0.51, office_4 0.41). With all eight observations (`--mode r8`)
+the single sequence tried first gave the same picture (ERP MAE 0.56 m, fused-all
+0.84 m, top 25 % 0.31 m).
 
 Reading: fusing every predicted point makes the model *less* accurate than a
 single step (outliers from every step survive while the agreeing points merge),
 so the useful quantity is the support a voxel gathers across steps: keeping the
-best-supported quarter roughly doubles the accuracy fraction. The three weight
-rules rank voxels almost identically at every kept fraction, so neither the
-range prior nor the observation-dropout spread adds information beyond the
-multi-view count on this sequence. The top-down picture
-(`outputs/fusion/apartment_2/seq_0000.png`) shows why: each step's prediction
-is a smooth shell around the receiver, and the shells stack into a blob along
-the trajectory instead of the room's walls. This is one sequence; the numbers
-are not a result yet. The criteria X and Y above are still to be set by the owner.
+best-supported quarter takes accuracy from 0.64 m to 0.36 m at the cost of
+completeness. The three weight rules rank voxels almost identically at every
+kept fraction, so neither the range prior nor the observation-dropout spread
+adds information beyond the multi-view count. The top-down pictures
+(`outputs/fusion/r2/<scene>/<seq>.png`) show why: each step's prediction is a
+smooth shell around the receiver, and the shells stack into a blob along the
+trajectory instead of the room's walls. The criteria X and Y above are still to
+be set by the owner.
