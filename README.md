@@ -159,4 +159,28 @@ little and changes no conclusion: one heading to four moves the per-step ERP
 error 0.296 → 0.253 m and the support-ranked quarter 0.29 → 0.26 m, while the
 oracle stays at 0.07 m throughout.
 
-Recovery against the number of views is running; 미확인 until it lands.
+**Against the number of views.** The same sequences fused from N steps spread
+evenly over the trajectory (accuracy / fraction within 0.2 m, completeness in
+metres):
+
+| N | r2 fused all | r2 support top 25 % | r2 oracle top 25 % | r2 completeness |
+|---|---|---|---|---|
+| 2 | 0.48 / 47 % | 0.23 / 71 % | 0.05 / 100 % | 0.27 |
+| 4 | 0.50 / 44 % | 0.25 / 69 % | 0.05 / 100 % | 0.24 |
+| 8 | 0.53 / 40 % | 0.26 / 65 % | 0.06 / 100 % | 0.24 |
+| 16 | 0.57 / 36 % | 0.28 / 61 % | 0.07 / 98 % | 0.24 |
+| all (23.7) | 0.60 / 35 % | 0.29 / 60 % | 0.08 / 97 % | 0.25 |
+
+r8 behaves the same way one step better throughout (N = 2: 0.44 / 51 %, all:
+0.56 / 39 %). Note that "top 25 %" is a fraction, not a fixed budget, so the kept
+set grows with N; the "fused all" and completeness columns are budget-free and
+carry the finding.
+
+**Reading.** Coverage saturates at two views: completeness is 0.27 m at N = 2 and
+0.24-0.25 m from N = 4 on, so a sequence adds almost no new visible surface.
+Accuracy meanwhile degrades monotonically with N, 0.48 -> 0.60 m. Each further
+view therefore contributes mostly wrong surface on top of ground already
+covered, which is what a prediction that spans the whole panorama at roughly the
+right scale would do. Whatever a trajectory is worth here, it is not worth
+accumulation; it has to be worth *disagreement*, i.e. using the later views to
+reject what the earlier ones got wrong. That is what steps 3 and 4 test.
