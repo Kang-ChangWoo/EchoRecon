@@ -36,8 +36,11 @@ class Sequence:
     def pose(self, i: int) -> dict:
         return self.poses[i]
 
-    def gt_depth(self, i: int) -> np.ndarray:
-        return np.load(self.dir / "erp_depth_radial" / f"step_{i:03d}.npy").astype(np.float32)
+    def gt_depth(self, i: int, kind: str = "face") -> np.ndarray:
+        """kind "face": erp_depth, the per-face cubemap z-depth the base model was trained on.
+        kind "radial": erp_depth_radial, Euclidean distance along the ray."""
+        sub = {"face": "erp_depth", "radial": "erp_depth_radial"}[kind]
+        return np.load(self.dir / sub / f"step_{i:03d}.npy").astype(np.float32)
 
     def wav8(self, i: int, window: int) -> np.ndarray:
         """(8, window) float32: [000 L,R | 090 L,R | 180 L,R | 270 L,R], OAA's training order."""

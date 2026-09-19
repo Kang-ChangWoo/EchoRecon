@@ -34,7 +34,7 @@ def main() -> int:
     a = ap.parse_args()
     S = Sequence(a.scene, a.seq)
     steps = S.steps[: a.pairs + 1]
-    depths = [S.gt_depth(i) for i in steps]
+    depths = [S.gt_depth(i, "radial") for i in steps]
     H, W = depths[0].shape
     print(f"{a.scene}/{a.seq}: {len(S)} steps, ERP {H}x{W}")
     print(f"{'convention':10s} {'median NN (m)':>14s} {'mean NN (m)':>12s} {'<5 cm':>7s} {'floor y std':>12s}")

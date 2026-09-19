@@ -47,7 +47,7 @@ def main() -> int:
     floor_y = meta.get("floor_y_habitat", None)
     S = Sequence(a.scene, a.seq)
     steps = S.steps[: a.steps]
-    depths = [S.gt_depth(i) for i in steps]
+    depths = [S.gt_depth(i, "radial") for i in steps]
     print(f"{a.scene}/{a.seq}: plan {H}x{W}, offsets cx={cx:.3f} cy={cy:.3f} floor_y={floor_y}")
     for name in CONVENTIONS:
         dirs = ray_dirs(*depths[0].shape, name)

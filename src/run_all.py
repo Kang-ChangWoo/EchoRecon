@@ -30,19 +30,22 @@ def main() -> int:
     ap.add_argument("--gpu", default="0")
     ap.add_argument("--hop", type=int, default=160)
     ap.add_argument("--dropout-samples", type=int, default=8)
+    ap.add_argument("--step-stride", type=int, default=1)
+    ap.add_argument("--tag", default="")
     ap.add_argument("--skip-existing", action="store_true")
     a = ap.parse_args()
     rows = []
     for sc in a.scenes:
         for sq in sequences(sc):
             pred = REPO / "outputs" / "pred" / a.mode / sc / f"{sq}.npz"
-            fus = REPO / "outputs" / "fusion" / a.mode / sc / f"{sq}.json"
+            fus = REPO / "outputs" / "fusion" / a.mode / sc / f"{sq}{a.tag}.json"
             if not (a.skip_existing and pred.exists()):
                 subprocess.run([PY, str(HERE / "predict.py"), "--scene", sc, "--seq", sq, "--mode", a.mode, "--gpu", a.gpu,
                                 "--hop", str(a.hop), "--dropout-samples", str(a.dropout_samples)], check=True,
                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             if not (a.skip_existing and fus.exists()):
-                subprocess.run([PY, str(HERE / "eval_fusion.py"), "--scene", sc, "--seq", sq, "--mode", a.mode], check=True,
+                subprocess.run([PY, str(HERE / "eval_fusion.py"), "--scene", sc, "--seq", sq, "--mode", a.mode,
+                                "--step-stride", str(a.step_stride), "--tag", a.tag], check=True,
                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             r = json.loads(fus.read_text())
             rows.append((sc, sq, r))
@@ -63,7 +66,7 @@ def main() -> int:
 
     S = {sc: agg([r for r in rows if r[0] == sc]) for sc in a.scenes}
     S["all"] = agg(rows)
-    L = [f"# Fusion over the held-out sequences, mode {a.mode}, hop {a.hop}\n",
+    L = [f"# Fusion over the held-out sequences, mode {a.mode}, hop {a.hop}, every {a.step_stride} step(s)\n",
          "Mean over sequences. acc = mean nearest distance predicted->reference (m) / fraction within 0.2 m; comp = reference->predicted (m).\n",
          "| scene | seqs | ERP MAE | single acc | fused all acc | uniform top50 / top25 | range-prior top50 / top25 | model-std top50 / top25 | comp all / top25 |",
          "|---|---|---|---|---|---|---|---|---|"]
@@ -73,8 +76,8 @@ def main() -> int:
                  f"{f(o['uniform']['0.5'])} / {f(o['uniform']['0.25'])} | {f(o['range_prior']['0.5'])} / {f(o['range_prior']['0.25'])} | "
                  f"{f(o['model_std']['0.5']) if 'model_std' in o else '–'} / {f(o['model_std']['0.25']) if 'model_std' in o else '–'} | "
                  f"{o['uniform']['all']['comp']:.2f} / {o['uniform']['0.25']['comp']:.2f} |")
-    (REPO / "outputs" / f"summary_{a.mode}.md").write_text("\n".join(L) + "\n")
-    (REPO / "outputs" / f"summary_{a.mode}.json").write_text(json.dumps(S, indent=1))
+    (REPO / "outputs" / f"summary_{a.mode}{a.tag}.md").write_text("\n".join(L) + "\n")
+    (REPO / "outputs" / f"summary_{a.mode}{a.tag}.json").write_text(json.dumps(S, indent=1))
     print("\n".join(L))
     return 0
 

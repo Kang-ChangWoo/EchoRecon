@@ -33,7 +33,7 @@ HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
 sys.path.insert(0, str(HERE))
 from data import Sequence  # noqa: E402
-from erp import quat_to_R, ray_dirs  # noqa: E402
+from erp import quat_to_R, ray_dirs, to_radial  # noqa: E402
 from fuse import TSDF, WEIGHTS, accuracy_completeness, voxel_downsample  # noqa: E402
 
 
@@ -43,7 +43,8 @@ def resize_nearest(d: np.ndarray, hw):
     return d[r][:, c]
 
 
-def unproject_res(depth, pose, dirs, max_depth, stride):
+def unproject_res(depth, pose, dirs, max_depth, stride, kind="face"):
+    depth = to_radial(depth, dirs, kind)
     d = depth[::stride, ::stride]; dd = dirs[::stride, ::stride]
     valid = np.isfinite(d) & (d > 0) & (d < max_depth)
     P = dd[valid] * d[valid][:, None]
@@ -64,12 +65,24 @@ def main() -> int:
     ap.add_argument("--max-depth", type=float, default=10.0)
     ap.add_argument("--stride", type=int, default=2, help="pixel stride on the 256x512 prediction")
     ap.add_argument("--convention", default="right0")
+    ap.add_argument("--depth-kind", default="face", choices=["face", "radial"],
+                    help="what the stored/predicted depth means; the base model outputs per-face "
+                         "cubemap z-depth ('face'), which is converted to radial before unprojection")
+    ap.add_argument("--step-stride", type=int, default=1,
+                    help="fuse every k-th step. With k = (channels per step) / 2 the observation sets "
+                         "r2/fb/r6/r8 are compared at one fixed audio budget rather than at one step count")
+    ap.add_argument("--tag", default="", help="suffix on the output file name")
     a = ap.parse_args()
     a.pred_dir = a.pred_dir or REPO / "outputs" / "pred" / a.mode
     a.out_dir = a.out_dir or REPO / "outputs" / "fusion" / a.mode
     z = np.load(a.pred_dir / a.scene / f"{a.seq}.npz")
     pred = z["pred"].astype(np.float32); steps = z["steps"].tolist(); meta = json.loads(str(z["meta"]))
     std = z["std"].astype(np.float32) if z["std"].size else None
+    if a.step_stride > 1:
+        sel = slice(None, None, a.step_stride)
+        pred, steps = pred[sel], steps[sel]
+        std = std[sel] if std is not None else None
+    meta["step_stride"] = a.step_stride
     S = Sequence(a.scene, a.seq)
     H, W = pred.shape[1:]
     dirs = ray_dirs(H, W, a.convention)
@@ -77,10 +90,10 @@ def main() -> int:
     # reference and per-step ERP error
     ref, mae = [], []
     for k, i in enumerate(steps):
-        g = resize_nearest(S.gt_depth(i), (H, W))
+        g = resize_nearest(S.gt_depth(i, a.depth_kind), (H, W))
         m = np.isfinite(g) & (g > 0) & (g < a.max_depth)
         mae.append(float(np.abs(pred[k][m] - g[m]).mean()))
-        ref.append(unproject_res(g, S.pose(i), dirs, a.max_depth, a.stride)[0])
+        ref.append(unproject_res(g, S.pose(i), dirs, a.max_depth, a.stride, a.depth_kind)[0])
     ref_cloud, _ = voxel_downsample(np.concatenate(ref), a.voxel / 2)
     res = dict(meta=meta, n_steps=len(steps), voxel=a.voxel, tau=a.tau, erp_mae_m=float(np.mean(mae)),
                ref_points=int(len(ref_cloud)))
@@ -90,7 +103,7 @@ def main() -> int:
     # raw clouds and voxelised clouds are not on the same footing)
     per, clouds = [], []
     for k, i in enumerate(steps):
-        P, valid, d, dw = unproject_res(pred[k], S.pose(i), dirs, a.max_depth, a.stride)
+        P, valid, d, dw = unproject_res(pred[k], S.pose(i), dirs, a.max_depth, a.stride, a.depth_kind)
         clouds.append((P, d, dw, np.asarray(S.pose(i)["position"], float), (std[k][::a.stride, ::a.stride][valid] if std is not None else None)))
         per.append(accuracy_completeness(voxel_downsample(P, a.voxel)[0], ref_cloud, a.tau))
     res["single_step"] = {k: float(np.mean([p[k] for p in per])) for k in per[0]}
@@ -127,7 +140,7 @@ def main() -> int:
               f"{kept} | tsdf acc {r['tsdf']['acc']:.3f} ({100*r['tsdf']['acc_frac']:.1f}%) comp {r['tsdf']['comp']:.3f}")
     ss = res["single_step"]
     print(f"[single-step ] acc {ss['acc']:.3f} m ({100*ss['acc_frac']:.1f}% <{a.tau} m) comp {ss['comp']:.3f} | ERP MAE {res['erp_mae_m']:.3f} m")
-    out = a.out_dir / a.scene / f"{a.seq}.json"
+    out = a.out_dir / a.scene / f"{a.seq}{a.tag}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(res, indent=1))
 

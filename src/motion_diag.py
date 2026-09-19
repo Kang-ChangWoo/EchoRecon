@@ -57,7 +57,7 @@ def main() -> int:
             P = z["pred"].astype(np.float32)                      # (T, H, W)
             steps = z["steps"].tolist()
             S = Sequence(sc, sq)
-            G = np.stack([resize_nearest(S.gt_depth(i), P.shape[1:]) for i in steps]).astype(np.float32)
+            G = np.stack([resize_nearest(S.gt_depth(i, "face"), P.shape[1:]) for i in steps]).astype(np.float32)
             M = np.isfinite(G) & (G > 0) & (G < a.max_depth)
             keep = M.all(0)                                        # pixels valid at every step
             if keep.sum() < 100:

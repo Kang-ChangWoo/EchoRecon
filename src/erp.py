@@ -45,12 +45,34 @@ def quat_to_R(q) -> np.ndarray:
     ])
 
 
+def face_cos(dirs: np.ndarray) -> np.ndarray:
+    """cos of the angle between each ray and the normal of the cube face it belongs to."""
+    return np.abs(dirs).max(-1)
+
+
+def to_radial(depth: np.ndarray, dirs: np.ndarray, kind: str = "face") -> np.ndarray:
+    """Depth in metres along the ray. `kind` says what the stored value is:
+
+    radial  Euclidean distance along the ray (erp_depth_radial in the sequence data)
+    face    per-face cubemap z-depth resampled to ERP: the value is
+            radial * max(|dx|,|dy|,|dz|). This is what erp_depth holds in both the
+            sequence and the training data, so it is what the base model predicts;
+            verified exactly (0.0000 m) against erp_depth_radial on the sequences.
+    """
+    if kind == "radial":
+        return depth
+    if kind == "face":
+        return depth / face_cos(dirs)
+    raise ValueError(kind)
+
+
 def unproject(depth: np.ndarray, pose: dict, convention: str = "right0", dirs: np.ndarray | None = None,
-              max_depth: float = 10.0, stride: int = 1):
-    """Radial ERP depth (H, W) + pose -> world points (N, 3) and the valid mask used."""
+              max_depth: float = 10.0, stride: int = 1, kind: str = "radial"):
+    """ERP depth (H, W) + pose -> world points (N, 3) and the valid mask used."""
     H, W = depth.shape
     if dirs is None:
         dirs = ray_dirs(H, W, convention)
+    depth = to_radial(depth, dirs, kind)
     d = depth[::stride, ::stride]
     dd = dirs[::stride, ::stride]
     valid = np.isfinite(d) & (d > 0) & (d < max_depth)
