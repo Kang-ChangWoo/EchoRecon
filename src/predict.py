@@ -3,10 +3,9 @@
 
 The base model is imported from its sibling checkout (ECHO_DEPTH_ROOT, default
 ../hear360 relative to this repository) and run as its own sequence-inference
-script does. --mode r2 (default) feeds the front binaural pair only, the
-two channels [000 L,R], to the base model's 2-observation checkpoint; --mode r8
-feeds all four headings [000 L,R | 090 L,R | 180 L,R | 270 L,R] to the
-8-observation one. Magnitude STFT (n_fft 512,
+script does. --mode picks the observation set and the matching
+checkpoint: r2 (default) one heading, the front binaural pair [000 L,R]; fb two
+headings, front and back [000 L,R | 180 L,R]; r6 three; r8 all four. Magnitude STFT (n_fft 512,
 win 400, hop --hop), first 256 bins, nearest-resized to 256x512, view poses
 from the checkpoint's mode. The hop is sweepable; the trained recipe is 160 and
 every output records the hop it was produced with.
@@ -35,6 +34,15 @@ REPO = HERE.parent
 BASE_ROOT = Path(os.environ.get("ECHO_DEPTH_ROOT", REPO.parent / "hear360")).resolve()
 sys.path.insert(0, str(HERE))
 from data import Sequence  # noqa: E402
+
+# which of the eight channels of a step each observation set uses. The step's
+# channels are [000 L,R | 090 L,R | 180 L,R | 270 L,R]; a "heading" contributes
+# its two ears together.
+CHAN = {"r2": [0, 1],                    # one heading (front binaural pair)
+        "fb": [0, 1, 4, 5],              # two headings, front and back
+        "r6": [0, 1, 2, 3, 6, 7],        # three headings, front / +90 / +270
+        "r8": [0, 1, 2, 3, 4, 5, 6, 7]}  # four headings
+CKPT = {m: f"comparison/oaa_{m}_fin/best.pth" for m in CHAN}
 
 
 def load_base_model(ckpt_rel: str, device):
@@ -68,8 +76,9 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--scene", required=True)
     ap.add_argument("--seq", required=True)
-    ap.add_argument("--mode", default="r2", choices=["r2", "r8"],
-                    help="r2: the front binaural pair only [000 L,R] (2 channels); r8: all four headings (8 channels)")
+    ap.add_argument("--mode", default="r2", choices=sorted(CHAN),
+                    help="observation set: r2 one heading (2 ch), fb two headings front/back (4 ch), "
+                         "r6 three headings (6 ch), r8 four headings (8 ch)")
     ap.add_argument("--ckpt", default=None, help="relative to ECHO_DEPTH_ROOT; default the base model's final run for --mode")
     ap.add_argument("--hop", type=int, default=160)
     ap.add_argument("--dropout-samples", type=int, default=0)
@@ -82,8 +91,8 @@ def main() -> int:
     import torch
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if a.ckpt is None:
-        a.ckpt = {"r2": "comparison/oaa_r2_fin/best.pth", "r8": "comparison/oaa_r8_fin/best.pth"}[a.mode]
-    nch = {"r2": 2, "r8": 8}[a.mode]
+        a.ckpt = CKPT[a.mode]
+    chans = CHAN[a.mode]; nch = len(chans)
     if a.dropout_kmax is None:
         a.dropout_kmax = nch // 2
     model, poses, args, DM = load_base_model(a.ckpt, device)
@@ -96,7 +105,7 @@ def main() -> int:
     t0 = time.time()
     with torch.no_grad():
         for i in S.steps:
-            x = spec8(S.wav8(i, window)[:nch], a.hop, device)      # channel order [000 L,R | 090 | 180 | 270]
+            x = spec8(S.wav8(i, window)[chans], a.hop, device)
             with torch.autocast("cuda", dtype=torch.bfloat16):
                 D = model(x, view_poses=poses).float() * md
             preds.append(D[0, 0].cpu().numpy().astype(np.float16)); steps.append(i)
