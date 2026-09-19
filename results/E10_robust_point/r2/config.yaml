@@ -1,0 +1,13 @@
+{
+ "mode": "r2",
+ "scenes": "['apartment_2', 'frl_apartment_5', 'office_4']",
+ "ns": "[0, 4]",
+ "voxel": "0.1",
+ "trunc": "0.3",
+ "stride": "2",
+ "max_depth": "10.0",
+ "convention": "right0",
+ "tsdf": "True",
+ "workers": "12",
+ "out": "/root/storage/implementation/shared_audio/EchoRecon/results/E10_robust_point"
+}

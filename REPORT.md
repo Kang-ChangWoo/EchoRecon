@@ -74,3 +74,75 @@ needs a mesh-derived occupancy (E80-E82).
 posterior (outlier removal, clustering, trimmed consensus, keyframes, TSDF) and
 see how much of the oracle gap it closes. If it closes most of it, the posterior
 hypothesis is not needed and the direction changes (STOP CHECK A).
+
+---
+
+## Stage B (E10-E15): STOP CHECK A — how far does point-only robust fusion get?
+
+**Hypothesis under test.** Before claiming a depth posterior is needed, the
+strongest fusion that does not need one has to be built and measured. If it
+closes most of the gap between counting support and the oracle, the posterior
+hypothesis is not needed and the direction changes.
+
+**Implementation.** `src/stage_b.py`. Ten families, each swept over its
+parameter, all acting on the same fused voxel cloud so they differ only in which
+voxels they keep: union; top fraction by support; at least k contributing
+points; statistical outlier removal (mean distance to the 20 nearest voxels
+above mean + z sd); radius outlier removal (fewer than n neighbours within r);
+26-connected components of at least m voxels; a consensus filter on the spread
+of the points inside each voxel; keyframes (views at least delta apart); a
+truncated signed distance surface at several weight thresholds; and the oracle
+ranking for reference. Robust operations are all in world geometry, never
+across ERP pixels, which have no correspondence between views. 3,432 rows over
+the 39 held-out sequences, at N = 4 and at every view.
+
+**Result.** Best F1@0.2 per family, with the operating point that achieved it:
+
+N = every view (23.7 mean):
+
+| method | param | F1@0.2 | accuracy | completeness | Chamfer | IoU | kept |
+|---|---|---|---|---|---|---|---|
+| oracle | top 25 % | 0.854 | 0.076 | 0.275 | 0.175 | 0.308 | 0.25 |
+| support, at least k | 4 | **0.566** | 0.317 | 0.433 | 0.375 | 0.145 | 0.34 |
+| support, top fraction | 0.25 | 0.562 | 0.287 | 0.542 | 0.415 | 0.150 | 0.25 |
+| radius outlier removal | 0.15 m / 16 | 0.538 | 0.310 | 0.557 | 0.434 | 0.106 | 0.18 |
+| TSDF | weight 50 | 0.531 | 0.260 | 0.858 | 0.559 | 0.147 | 0.27 |
+| keyframe | 1.0 m | 0.526 | 0.478 | 0.376 | 0.427 | 0.124 | 0.35 |
+| statistical outlier removal | z = 0 | 0.517 | 0.426 | 0.365 | 0.395 | 0.121 | 0.66 |
+| connected components | 500 | 0.479 | 0.587 | 0.254 | 0.420 | 0.103 | 0.98 |
+| consensus (voxel spread) | 0.06 | 0.476 | 0.605 | 0.246 | 0.425 | 0.102 | 1.00 |
+| union | – | 0.475 | 0.605 | 0.246 | 0.425 | 0.102 | 1.00 |
+
+N = 4: oracle 0.814, best point-only support at least 3 → 0.621, union 0.549;
+TSDF 0.600, radius outlier removal 0.600, statistical outlier removal 0.590,
+connected components 0.559, keyframe 0.550, consensus 0.549.
+
+Gap closed, (best point-only − union) / (oracle − union): **24 %** at every view
+and **27 %** at N = 4.
+
+**Reading.** STOP CHECK A does not fire. The best point-only fusion closes about
+a quarter of the oracle gap and leaves three quarters, so the observation that
+motivates this project is not explained away by weak fusion.
+
+Two further findings, both worth stating plainly. First, none of the
+conventional robust operations beats simply counting how many views put a point
+in a voxel: statistical and radius outlier removal, connected components, the
+voxel-spread consensus filter and keyframing all land at or below it, and only
+the TSDF comes close at N = 4. What separates a real surface from a wrong one
+here is how many independent views assert it, not whether it sits in a dense or
+well-connected part of the cloud. Second, robust fusion does not remove the
+view-count problem: the best point-only result at N = 4 (0.621) is still better
+than the best at every view (0.566), so more views continue to hurt even under
+the strongest selection available without a posterior.
+
+**Failure to note.** The consensus filter as implemented is nearly inert (its
+best setting keeps 100 % of voxels), because the spread of points inside a
+0.1 m voxel is bounded by the voxel itself. A per-ray consensus across views,
+rather than a per-voxel one, would be the meaningful version and is not
+implemented.
+
+**Next.** The fake Gaussian posterior control, which needs no training: turn the
+existing point predictions into posteriors of fixed width and fuse them softly.
+That separates "posterior fusion helps" from "learned ambiguity helps" before
+any model is trained, and it exercises the posterior fusion code that Stage D
+needs.
