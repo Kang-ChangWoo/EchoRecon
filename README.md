@@ -184,3 +184,61 @@ covered, which is what a prediction that spans the whole panorama at roughly the
 right scale would do. Whatever a trajectory is worth here, it is not worth
 accumulation; it has to be worth *disagreement*, i.e. using the later views to
 reject what the earlier ones got wrong. That is what steps 3 and 4 test.
+
+
+## Step 2: is the prediction a blurred truth? (no training)
+
+**Why.** Step 1 left one question open. If every view's prediction were the same
+smooth average of the room, the views would all be wrong in the same way, the
+disagreement between them would carry no signal, and no ranking could close the
+oracle gap. So before building a ranking, measure what kind of error this is.
+
+**What was done.** Two measurements on the model's own output space (the
+per-face depth it was trained on), 312 frames over the 39 held-out sequences.
+The ground truth is blurred by a Gaussian of sigma degrees of arc (the
+horizontal kernel widens towards the poles, where a column spans less angle) and
+compared with the prediction; the sigma that fits best says how far the
+prediction has smoothed the room away. Alongside it: what the blur costs on its
+own, the same curve for the sequence-mean prediction (a genuinely static shell),
+and the roughness (mean absolute angular gradient) of each. Then the same fit at
+STFT hops 40, 80, 160 (trained) and 320.
+
+**Result.**
+
+| sigma (deg) | 0 | 1 | 2 | 4 | 8 | 16 | 32 | 64 |
+|---|---|---|---|---|---|---|---|---|
+| \|prediction − blur(GT)\|, r2 | 0.298 | 0.291 | 0.285 | 0.276 | **0.270** | 0.296 | 0.391 | 0.494 |
+| \|prediction − blur(GT)\|, r8 | 0.255 | 0.247 | 0.242 | 0.234 | **0.232** | 0.270 | 0.384 | 0.502 |
+| \|blur(GT) − GT\|, what the blur alone costs | 0 | 0.024 | 0.044 | 0.080 | 0.144 | 0.257 | 0.420 | 0.555 |
+| \|sequence-mean prediction − blur(GT)\|, r2 | 0.387 | 0.379 | 0.371 | 0.358 | 0.339 | **0.334** | 0.382 | 0.441 |
+
+Roughness (mean \|gradient\|, metres per pixel): prediction 0.0195 (r2) and
+0.0206 (r8), truth 0.0191, truth blurred at 8 deg 0.0101.
+
+Hop sweep on one scene (96 frames), best sigma and the error there: hop 40
+16 deg / 0.470 m, hop 80 16 deg / 0.350 m, hop 160 (trained) 8 deg / 0.317 m,
+hop 320 8 deg / 0.656 m with roughness 0.0306, above the truth's.
+
+**Reading.** The prediction is *not* an over-smoothed shell, and the wording
+used earlier in this file was wrong. Three things say so. It is as rough as the
+truth (0.0195 against 0.0191), where a truth blurred at the fitted 8 degrees is
+about half as rough (0.0101). The 8-degree fit buys only 9 % over the unblurred
+truth, and the prediction's error there, 0.27 m, is far above what the blur
+itself costs, 0.14 m, so "a blurred truth" is a poor description of it. And the
+genuinely static shell, the sequence-mean prediction, is clearly worse than the
+per-step prediction (0.334 against 0.270), consistent with the motion
+diagnostic: the prediction moves with the receiver, by 137 % of the truth's
+step-to-step change, with residual correlation +0.54.
+
+So the error is large, fine-grained, and moves with the pose rather than being a
+shared smooth bias. That is the case in which cross-view disagreement should
+carry signal, because different views make different mistakes. It also explains
+why accumulation fails: in a point-cloud union, two views that disagree put
+their points in *different* voxels, so both survive and neither cancels. Only a
+representation in which a later view can remove what an earlier view asserted
+can use that disagreement. That is the mechanism steps 3 and 5 are for.
+
+**Unverified (미확인).** The hop sweep is confounded: the model was trained at
+hop 160, so hops 40, 80 and 320 are off-distribution and every one of them is
+worse. The sweep therefore cannot say whether the input's time resolution sets
+the blur width; answering that needs a model retrained at each hop.
