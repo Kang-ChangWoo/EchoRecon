@@ -23,14 +23,14 @@ current revision. Updated as work proceeds.
 
 | ID | Experiment | Status | Existing evidence | Missing | Result | Next action | Commit |
 |---|---|---|---|---|---|---|---|
-| E00 | single-view point depth | DONE | `outputs/summary_*.json` (`erp_mae`, `single`), 39 sequences x 4 observation sets | per-scene CSV | ERP MAE 0.296 (r2) to 0.253 (r8); single-step accuracy 0.44 -> 0.40 m | keep | 328d5c9 |
-| E01 | view-count curve | PARTIAL | N = 2, 4, 8, 16, all for r2 and r8 (`summary_*_N*.json`) | N = 1 and 32; precision/recall/F1/IoU/Chamfer; no seed variation | fused accuracy degrades monotonically 0.48 -> 0.60 m; completeness flat from N = 4 | extend | |
-| E02 | several scenes and seeds | PARTIAL | 3 test scenes, 39 sequences | view subsets are evenly spaced and deterministic; no seed | | add seeded subsets | |
+| E00 | single-view point depth | DONE | `outputs/summary_*.json` plus `results/E01_view_curve/r2/per_scene.csv` (N=1 row) | | ERP MAE 0.296 (r2) to 0.253 (r8); single-step accuracy 0.44 -> 0.40 m | keep | 328d5c9 |
+| E01 | view-count curve | DONE | `results/E01_view_curve/r2/` (8892 rows, N = 1/2/4/8/16/32/all, 3 seeds, full metric set) | other observation sets | Chamfer, F1 and IoU peak at N=4 and decline after; accuracy degrades, completeness improves | keep | Stage A |
+| E02 | several scenes and seeds | DONE | per-scene and per-seed CSV in the same folder | | all 3 scenes and 3 seeds show the same shape; 87 % of sequence-seed pairs peak at N<=4 | keep | Stage A |
 | E03 | uniform fusion degradation | DONE | `summary_*.json` | | fused-all 0.60 m against single-step 0.44 m (r2) | keep | 328d5c9 |
 | E04 | voxel support filtering | DONE | kept-fraction curves in `summary_*.json` | | top 25 % by support 0.29 m, completeness 0.25 -> 0.54 m | keep | 328d5c9 |
-| E05 | support threshold sweep | PARTIAL | four fractions 0.75/0.5/0.25/0.1 | a dense sweep and absolute thresholds | | extend | |
-| E06 | accuracy-completeness Pareto | PARTIAL | four points per method | full curve, precision/recall, F1 | | extend | |
-| E07 | oracle headroom | DONE | `fused.oracle` in every summary | | oracle top 25 % 0.076 m / 97 % within 0.2 m at completeness 0.275 m | keep | a461855 |
+| E05 | support threshold sweep | DONE | kept fractions 1.0/0.9/0.75/0.5/0.25/0.1 for both rankings | absolute thresholds | support top 25 % F1 peaks at N=4 (0.594) | keep | Stage A |
+| E06 | accuracy-completeness Pareto | DONE | the same six fractions give the curve | | | keep | Stage A |
+| E07 | oracle headroom | DONE | `fused.oracle` and the ranked curves | | oracle top-quarter F1 rises with every view, 0.660 -> 0.855, while support peaks at N=4 | keep | Stage A |
 | E10-E15 | robust point fusion | NOT_DONE | TSDF exists but is not evaluated as a baseline | outlier removal, clustering, trimmed consensus, keyframes | | Stage B | |
 | E20-E25 | depth posterior | NOT_DONE | | head, training, calibration, rescue@K, fake Gaussian | | Stage C | |
 | E30-E32 | same-backbone comparison | NOT_DONE | | | | Stage D | |
@@ -53,9 +53,10 @@ current revision. Updated as work proceeds.
 
 ## Known gaps in the evaluation itself
 
-- Metrics reported so far are accuracy (mean nearest distance and fraction
-  within tau) and completeness. Precision, recall, F1/F-score, voxel IoU,
-  symmetric Chamfer and coverage are not yet computed.
+- The full metric set (accuracy, completeness, symmetric Chamfer, precision /
+  recall / F1 at three thresholds, voxel IoU, coverage) is implemented in
+  `src/fuse.py:metrics` and used from Stage A on. Results predating it report
+  accuracy and completeness only.
 - The reference is the ground-truth depth of the same steps, fused. It
   therefore cannot penalise a method for missing what no view could see, and it
   is not comparable to DAPS. A mesh-derived occupancy is required for the

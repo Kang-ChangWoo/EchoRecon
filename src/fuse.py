@@ -38,6 +38,37 @@ def weight_range_prior(depth: np.ndarray, scale: float = 3.0, power: float = 2.0
 WEIGHTS = {"uniform": weight_uniform, "range_prior": weight_range_prior}
 
 
+def metrics(pred: np.ndarray, gt: np.ndarray, taus=(0.1, 0.2, 0.5), voxel: float = 0.1):
+    """Point and voxel metrics of a reconstruction against a reference.
+
+    accuracy      mean nearest distance predicted -> reference (m)
+    completeness  mean nearest distance reference -> predicted (m)
+    chamfer       symmetric, 0.5 * (accuracy + completeness)
+    precision@t   fraction of predicted points within t of the reference
+    recall@t      fraction of reference points within t of a prediction
+    f1@t          harmonic mean of the two
+    iou           voxel intersection over union on a shared grid
+    n_pred        number of predicted points (coverage)
+    """
+    out = {"n_pred": int(len(pred)), "n_ref": int(len(gt))}
+    if len(pred) == 0 or len(gt) == 0:
+        return {**out, "acc": float("nan"), "comp": float("nan"), "chamfer": float("nan"),
+                **{f"{k}@{t}": float("nan") for t in taus for k in ("precision", "recall", "f1")},
+                "iou": float("nan")}
+    d_pg, _ = cKDTree(gt).query(pred, k=1, workers=-1)
+    d_gp, _ = cKDTree(pred).query(gt, k=1, workers=-1)
+    out["acc"] = float(d_pg.mean()); out["comp"] = float(d_gp.mean())
+    out["chamfer"] = float(0.5 * (d_pg.mean() + d_gp.mean()))
+    for t in taus:
+        p = float((d_pg < t).mean()); r = float((d_gp < t).mean())
+        out[f"precision@{t}"] = p; out[f"recall@{t}"] = r
+        out[f"f1@{t}"] = float(2 * p * r / (p + r)) if p + r > 0 else 0.0
+    kp = set(map(tuple, np.floor(pred / voxel).astype(np.int64)))
+    kg = set(map(tuple, np.floor(gt / voxel).astype(np.int64)))
+    out["iou"] = float(len(kp & kg) / max(len(kp | kg), 1))
+    return out
+
+
 def accuracy_completeness(pred: np.ndarray, gt: np.ndarray, tau: float = 0.1):
     """Chamfer-style: accuracy = mean dist pred->gt and fraction within tau; completeness = gt->pred."""
     if len(pred) == 0 or len(gt) == 0:

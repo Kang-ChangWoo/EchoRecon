@@ -1,0 +1,11 @@
+{
+ "mode": "r2",
+ "scenes": "['apartment_2', 'frl_apartment_5', 'office_4']",
+ "voxel": "0.1",
+ "stride": "2",
+ "max_depth": "10.0",
+ "convention": "right0",
+ "seeds": "3",
+ "workers": "12",
+ "out": "/root/storage/implementation/shared_audio/EchoRecon/results/E01_view_curve"
+}
