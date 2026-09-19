@@ -108,33 +108,55 @@ right* ("right0") and for 25-37 % under the other three. So the ground-truth
 depths of a sequence do fuse into one consistent 3D model, and "right0" is the
 default convention from here on.
 
-## Step-2 result so far (front binaural pair, all held-out sequences)
+## Step 1: the oracle ceiling and what the support ranking recovers
 
-Observation set: the front binaural pair only (`--mode r2`, the base model's
-2-observation checkpoint), trained hop 160, 256x512 predictions, 0.1 m voxels,
-tau = 0.2 m, reference = fused ground truth of the same steps. Mean over the 39
-sequences of the three held-out scenes (`outputs/summary_r2.md`):
+**Why.** Fusing every predicted point is worse than a single step, and keeping
+the voxels with the most cross-view support is better. That raises the question
+the ceiling answers: is the remaining error there because the information is not
+in the predictions, or because the ranking is poor? An oracle ranking (sort the
+fused voxels by their true distance to the reference) separates the two.
 
-| model | acc (m) | acc < 0.2 m | comp (m) |
-|---|---|---|---|
-| single step, voxelised, mean over steps | 0.52 | 30 % | – |
-| fused, all voxels | 0.64 | 25 % | 0.40 |
-| fused, top 50 % voxels by weight sum: uniform / range-prior / model-std | 0.45 / 0.43 / 0.48 | 32 / 32 / 31 % | |
-| fused, top 25 %: uniform / range-prior / model-std | 0.36 / 0.36 / 0.39 | 37 / 37 / 36 % | 0.83 |
+**What was done.** For each of the 39 held-out sequences, all steps are fused
+into one voxel set whose positions are the plain average of the points in each
+voxel. Four rankings are then scored on those same voxels: cross-view support
+(point count), a range prior, the observation-dropout spread, and the oracle.
+Each ranking's top-fraction curve is measured, and the recovery rate at fraction
+f is (uniform − method) / (uniform − oracle). Observation sets r2 / fb / r6 / r8
+(one, two, three, four receiver headings), trained hop 160, 0.1 m voxels,
+tau = 0.2 m, 23.7 steps per sequence on average.
 
-Per-step ERP MAE against the ground truth: 0.50 m (apartment_2 0.57,
-frl_apartment_5 0.51, office_4 0.41). With all eight observations (`--mode r8`)
-the single sequence tried first gave the same picture (ERP MAE 0.56 m, fused-all
-0.84 m, top 25 % 0.31 m).
+**Result.** Accuracy as mean nearest distance to the reference and the fraction
+within 0.2 m; completeness reported separately.
 
-Reading: fusing every predicted point makes the model *less* accurate than a
-single step (outliers from every step survive while the agreeing points merge),
-so the useful quantity is the support a voxel gathers across steps: keeping the
-best-supported quarter takes accuracy from 0.64 m to 0.36 m at the cost of
-completeness. The three weight rules rank voxels almost identically at every
-kept fraction, so neither the range prior nor the observation-dropout spread
-adds information beyond the multi-view count. The top-down pictures
-(`outputs/fusion/r2/<scene>/<seq>.png`) show why: each step's prediction is a
-smooth shell around the receiver, and the shells stack into a blob along the
-trajectory instead of the room's walls. The criteria X and Y above are still to
-be set by the owner.
+| observation set | ERP MAE | single step | fused, all | support, top 25 % | oracle, top 25 % |
+|---|---|---|---|---|---|
+| r2, one heading | 0.296 | 0.44 / 51 % | 0.60 / 35 % | 0.29 / 60 % | 0.08 / 97 % |
+| fb, two headings | 0.286 | 0.44 / 52 % | 0.62 / 36 % | 0.27 / 61 % | 0.07 / 97 % |
+| r6, three headings | 0.279 | 0.43 / 52 % | 0.59 / 37 % | 0.28 / 62 % | 0.07 / 97 % |
+| r8, four headings | 0.253 | 0.40 / 55 % | 0.56 / 39 % | 0.26 / 65 % | 0.07 / 98 % |
+
+Completeness (metres, reference → predicted), r2: all voxels 0.25, support top
+25 % 0.54, oracle top 25 % 0.27.
+
+Recovery rate, (uniform − method) / (uniform − oracle):
+
+| ranking | top 75 % | top 50 % | top 25 % | top 10 % |
+|---|---|---|---|---|
+| range prior (r2 / r8) | +0.19 / +0.18 | +0.12 / +0.12 | +0.03 / +0.04 | −0.01 / +0.00 |
+| dropout spread (r2 / r8) | −0.08 / +0.04 | −0.10 / +0.09 | −0.13 / +0.06 | −0.15 / +0.03 |
+
+**Reading.** The information is in the fused set: a ranking that knows the
+answer keeps a quarter of the voxels at 0.07 m with 97 % inside 0.2 m, and it
+does so without paying in completeness (0.25 → 0.27 m, where the support
+ranking pays 0.25 → 0.54 m). So the limit measured here is the ranking, not the
+predictions. Cross-view support closes part of the gap on its own, and the two
+cheap scores on top of it close almost none of the rest: the range prior
+recovers a fifth of the gap at the loose end and nothing at the tight end, and
+the dropout spread is not usable at all for r2 (where only one of two
+observations can be dropped, so the spread is a weak signal, as expected) and
+recovers under a tenth for r8. Adding receiver headings improves every column a
+little and changes no conclusion: one heading to four moves the per-step ERP
+error 0.296 → 0.253 m and the support-ranked quarter 0.29 → 0.26 m, while the
+oracle stays at 0.07 m throughout.
+
+Recovery against the number of views is running; 미확인 until it lands.
