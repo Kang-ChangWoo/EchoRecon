@@ -32,8 +32,8 @@ current revision. Updated as work proceeds.
 | E06 | accuracy-completeness Pareto | DONE | the same six fractions give the curve | | | keep | Stage A |
 | E07 | oracle headroom | DONE | `fused.oracle` and the ranked curves | | oracle top-quarter F1 rises with every view, 0.660 -> 0.855, while support peaks at N=4 | keep | Stage A |
 | E10-E15 | robust point fusion | DONE | `results/E10_robust_point/r2/` (3432 rows, 10 families swept, N = 4 and all) | a per-ray consensus (the per-voxel one is inert) | best point-only closes 24 % of the oracle gap at every view, 27 % at N=4; no robust operation beats counting support | STOP CHECK A does not fire | Stage B |
-| E20-E25 | depth posterior | NOT_DONE | | head, training, calibration, rescue@K, fake Gaussian | | Stage C | |
-| E30-E32 | same-backbone comparison | NOT_DONE | | | | Stage D | |
+| E20-E25 | depth posterior | DONE | `outputs/posterior/posterior_r2/`, `results/E21_posterior_rays/posterior_r2_test.json`, `results/E25_fake_posterior/r2/` | r8 head still training; K = 64/256 not swept | argmax MAE 0.246 m (point baseline 0.289); mode rescue@10 8.6 % against the fake Gaussian's 0.0 %; 1.28 modes/ray; fake posterior fusion equals support counting on matched candidates | Stage D | Stage C |
+| E30-E32 | same-backbone comparison | NOT_DONE | point and posterior heads both exist on one backbone | the fusion comparison itself | | Stage D | |
 | E40-E43 | posterior fusion | NOT_DONE | | | | Stage D | |
 | E50-E51 | free-space ablation | NOT_DONE | | | | Stage E | |
 | E60-E62 | view diversity, shuffle, error correlation | PARTIAL | `support_diag.py` measured delta-restricted support (a diversity proxy) | pose shuffle, duplicate vs diverse views, error correlation against translation/yaw/overlap | delta restriction degrades every score; no evidence of neighbour-shared bias | Stage F | 328d5c9 |

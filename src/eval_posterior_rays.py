@@ -84,23 +84,34 @@ def main() -> int:
 
     def fit_T(loader):
         """One-parameter temperature on the validation split (never on test)."""
+        # a single scalar needs only a sample of rays; keeping whole logit maps on
+        # the card is several gigabytes, so rays are subsampled as they come
         logT = torch.zeros(1, device=dev, requires_grad=True)
         opt = torch.optim.LBFGS([logT], max_iter=40)
-        L, T_, M = [], [], []
+        rng = torch.Generator().manual_seed(0)
+        L, KK = [], []
+        per_batch = 20000
         with torch.no_grad():
             for i, b in enumerate(loader):
-                if i >= 20:
+                if i >= 12:
                     break
                 lg = model(b["spec"].to(dev), view_poses=poses).float()
-                L.append(lg.cpu()); T_.append((b["depth"] * md).squeeze(1).cpu()); M.append(b["mask"].squeeze(1).cpu())
-        L = torch.cat(L).to(dev); T_ = torch.cat(T_).to(dev); M = torch.cat(M).to(dev)
-        k = model.bin_of(T_)
+                d = (b["depth"].to(dev) * md).squeeze(1)
+                msk = b["mask"].to(dev).squeeze(1).bool()
+                lg = lg.permute(0, 2, 3, 1).reshape(-1, lg.shape[1])
+                k = model.bin_of(d).reshape(-1); msk = msk.reshape(-1)
+                idx = torch.nonzero(msk, as_tuple=False).squeeze(1)
+                if idx.numel() > per_batch:
+                    sel = torch.randperm(idx.numel(), generator=rng)[:per_batch].to(idx.device)
+                    idx = idx[sel]
+                L.append(lg[idx].cpu()); KK.append(k[idx].cpu())
+                del lg
+        L = torch.cat(L).to(dev); KK = torch.cat(KK).to(dev)
 
         def closure():
             opt.zero_grad()
             lp = F.log_softmax(L / logT.exp(), dim=1)
-            nll = -lp.gather(1, k.unsqueeze(1)).squeeze(1)
-            loss = (nll * M).sum() / M.sum()
+            loss = -lp.gather(1, KK.unsqueeze(1)).squeeze(1).mean()
             loss.backward(); return loss
         opt.step(closure)
         return float(logT.exp())

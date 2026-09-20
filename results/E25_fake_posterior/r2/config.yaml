@@ -1,0 +1,14 @@
+{
+ "mode": "r2",
+ "scenes": "['apartment_2', 'frl_apartment_5', 'office_4']",
+ "ns": "[0, 4]",
+ "voxel": "0.1",
+ "stride": "2",
+ "bins": "128",
+ "tau_band": "0.15",
+ "max_depth": "10.0",
+ "max_cand": "1500000.0",
+ "convention": "right0",
+ "workers": "10",
+ "out": "/root/storage/implementation/shared_audio/EchoRecon/results/E25_fake_posterior"
+}

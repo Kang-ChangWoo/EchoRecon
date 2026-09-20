@@ -146,3 +146,114 @@ existing point predictions into posteriors of fixed width and fuse them softly.
 That separates "posterior fusion helps" from "learned ambiguity helps" before
 any model is trained, and it exercises the posterior fusion code that Stage D
 needs.
+
+---
+
+## Stage B addendum (E25): the fake Gaussian control, on matched candidates
+
+**Why.** The first run of this control compared the best operating point of each
+method, but the posterior scored a full room grid (up to 1.5 M voxels) while the
+support ranking scored only voxels some view's argmax had hit (~84 k). Best-of
+over different candidate sets is not a comparison.
+
+**What was done.** `src/stage_b2.py` now also scores the *same* voxels the
+support ranking sees (`fake_posterior_same_cand`), so soft evidence is compared
+against hard counting with the candidate set held fixed. 6,240 rows.
+
+**Result.** F1@0.2 at matched kept fractions, every view:
+
+| kept fraction | support | fake posterior (sigma 0.05) | oracle |
+|---|---|---|---|
+| 0.002 | 0.053 | 0.064 | 0.209 |
+| 0.010 | 0.143 | 0.148 | 0.537 |
+| 0.050 | 0.383 | 0.331 | 0.781 |
+| 0.100 | 0.487 | 0.446 | 0.827 |
+| 0.250 | **0.562** | 0.540 | **0.854** |
+| 0.500 | 0.549 | 0.537 | 0.726 |
+
+Accuracy at the tight end favours the posterior (0.076 m against 0.256 m at
+fraction 0.002) and completeness favours counting throughout.
+
+**Reading.** On matched candidates and matched budget the two are the same
+method to within 0.02 F1, crossing over around a kept fraction of 0.02: soft
+evidence is the better precision ranking at the extreme tail and slightly worse
+everywhere that matters. Neither recovers the oracle gap. So STOP CHECK B's
+first half is settled before any training: **soft accumulation of a blurred
+point buys nothing.** If a learned posterior helps later, the credit belongs to
+the shape of the distribution, not to softness. The earlier "-55 %" figure was
+an artefact of the mismatched candidate sets and is withdrawn.
+
+---
+
+## Stage C (E20-E25): does the posterior keep the true depth alive?
+
+**Hypothesis under test.** If single-view echo geometry is ambiguous, a
+distribution trained on the same backbone should carry the true depth as a
+secondary hypothesis on the rays where the point estimate is wrong. If it does
+not, the loss is in the single-view predictor, not in the fusion.
+
+**Implementation.** `src/posterior_head.py` replaces only the decoder's final
+1-channel convolution with a K=128 linear-metric-bin head; the backbone,
+attention stack and decoder are the base model's, loaded from its released
+checkpoint. Trained by `src/train_posterior.py` on the base model's own training
+split (12 scenes, scene-disjoint from the held-out ones), KL against a Gaussian
+soft label one bin wide, two epochs head-only then full fine-tuning, 20 epochs,
+no auxiliary expected-depth term. Evaluated by `src/eval_posterior_rays.py` on
+the full test split (133.7 M rays) with temperature fitted on validation (1.462)
+and never on test.
+
+**Result.** Learned posterior, r2:
+
+| quantity | value |
+|---|---|
+| argmax MAE | 0.246 m (the point baseline reports 0.289 m on the same split) |
+| expected-depth MAE | 0.238 m |
+| argmaxes wrong by > 0.2 m | 26.5 % |
+| NLL / Brier / ECE | 2.400 / 0.829 / 0.160 |
+| mode coverage @1 / @10 | 72.4 % / 74.9 % |
+| **mode rescue @3 / @5 / @10** | **7.1 % / 8.1 % / 8.6 %** |
+| modes per ray (above 10 % of the peak) | 1.28 |
+| mass within 0.2 m of the truth, on wrong rays | 15.1 % |
+
+Fake Gaussian on the same argmax, every sigma: mode rescue 0.0 % at every K,
+1.00 modes per ray, NLL 3.33 to 7.68. Bin-based rescue@10 is 44.9 % for the
+learned posterior and 40.9 % for the fake.
+
+**Reading.** Three things, in order of how much they matter.
+
+The bin-based Rescue@K in the plan cannot answer the question it was written
+for. Ten bins of 0.077 m span ±5 bins around the argmax, so a *unimodal*
+Gaussian scores 40.9 % on it. Ranking local maxima instead separates the two
+cleanly, and every number below uses that version.
+
+The learned posterior is genuinely multimodal where the fake cannot be: 1.28
+modes per ray against 1.00, and mode rescue 8.6 % against 0.0 %. So the head did
+learn something a blurred point does not contain, and STOP CHECK B does not fire
+on the mode metric.
+
+But the size is small, and this is the number that shapes the next stage. On the
+26.5 % of rays where the point estimate is wrong, a secondary mode carries the
+truth 8.6 % of the time, which is 2.3 % of all rays. Mode coverage rises only
+from 72.4 % at K=1 to 74.9 % at K=10. Read strictly, this is close to the plan's
+CASE 2: most of what the point estimate loses is not recoverable from the
+distribution either, so the ceiling on posterior fusion is set by the
+single-view predictor.
+
+One qualification against that strict reading: fusion does not need a discrete
+second mode, it needs probability mass in the right place, and on wrong rays the
+posterior still puts 15.1 % of its mass within 0.2 m of the truth against the
+fake's 43.8 % at sigma 0.2 (which is mass around a *wrong* centre). Whether
+15.1 % of correctly-placed mass, accumulated over views, is enough to beat
+counting is exactly what Stage D measures, and it is no longer a matter of
+opinion.
+
+**Failure to note.** Validation KL bottoms at epoch 2 (1.346) and rises
+monotonically afterwards while the argmax error keeps improving slightly
+(0.292 to 0.274), so the checkpoint chosen by KL is an early one. With 12
+training scenes the distribution overfits well before the point estimate does.
+Choosing on KL is the honest choice for a distributional model and is kept, but
+the trade is recorded here.
+
+**Next.** Stage D, the comparison the project exists for, on one backbone:
+point regression to fusion, distribution to argmax to point fusion, and full
+posterior fusion, over the view-count curve.
