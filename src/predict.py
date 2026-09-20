@@ -63,11 +63,11 @@ def load_base_model(ckpt_rel: str, device):
     return model, poses, ck["args"], DM
 
 
-def spec8(w8: np.ndarray, hop: int, device):
+def spec8(w8: np.ndarray, hop: int, device, win: int = 400):
     import torch
     import torch.nn.functional as F
     t = torch.from_numpy(w8).to(device)
-    s = torch.stft(t, n_fft=512, win_length=400, hop_length=hop, window=torch.hann_window(400, device=device),
+    s = torch.stft(t, n_fft=512, win_length=win, hop_length=hop, window=torch.hann_window(win, device=device),
                    center=True, return_complex=True).abs()[:, :256]
     return F.interpolate(s.unsqueeze(0), size=(256, 512), mode="nearest")      # (1, 8, 256, 512)
 
@@ -80,7 +80,9 @@ def main() -> int:
                     help="observation set: r2 one heading (2 ch), fb two headings front/back (4 ch), "
                          "r6 three headings (6 ch), r8 four headings (8 ch)")
     ap.add_argument("--ckpt", default=None, help="relative to ECHO_DEPTH_ROOT; default the base model's final run for --mode")
-    ap.add_argument("--hop", type=int, default=160)
+    ap.add_argument("--hop", type=int, default=None, help="STFT hop; default the checkpoint's (released 160)")
+    ap.add_argument("--win", type=int, default=None, help="STFT window; default the checkpoint's (released 400)")
+    ap.add_argument("--name", default=None, help="output set name under --out-dir (default --mode)")
     ap.add_argument("--dropout-samples", type=int, default=0)
     ap.add_argument("--dropout-kmax", type=int, default=None, help="at most this many observations zeroed per sample (default half)")
     ap.add_argument("--gpu", default="0")
@@ -92,6 +94,12 @@ def main() -> int:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if a.ckpt is None:
         a.ckpt = CKPT[a.mode]
+    # retrained front-ends (E100 cause a) record their STFT window / hop in the checkpoint;
+    # the base data module reads them from the environment at import, so set them first
+    ck_args = torch.load(a.ckpt if os.path.isabs(a.ckpt) else BASE_ROOT / a.ckpt, map_location="cpu", weights_only=False)["args"]
+    a.win = a.win or int(ck_args.get("stft_win", 400)); a.hop = a.hop or int(ck_args.get("stft_hop", 160))
+    os.environ["STFT_WIN"] = str(a.win); os.environ["STFT_HOP"] = str(a.hop)
+    a.name = a.name or a.mode
     chans = CHAN[a.mode]; nch = len(chans)
     if a.dropout_kmax is None:
         a.dropout_kmax = nch // 2
@@ -105,7 +113,7 @@ def main() -> int:
     t0 = time.time()
     with torch.no_grad():
         for i in S.steps:
-            x = spec8(S.wav8(i, window)[chans], a.hop, device)
+            x = spec8(S.wav8(i, window)[chans], a.hop, device, a.win)
             with torch.autocast("cuda", dtype=torch.bfloat16):
                 D = model(x, view_poses=poses).float() * md
             preds.append(D[0, 0].cpu().numpy().astype(np.float16)); steps.append(i)
@@ -118,9 +126,9 @@ def main() -> int:
                     with torch.autocast("cuda", dtype=torch.bfloat16):
                         runs.append((model(xd, view_poses=poses).float() * md)[0, 0].cpu().numpy())
                 stds.append(np.std(np.stack(runs), 0).astype(np.float16))
-    out = a.out_dir / a.mode / a.scene / f"{a.seq}.npz"
+    out = a.out_dir / a.name / a.scene / f"{a.seq}.npz"
     out.parent.mkdir(parents=True, exist_ok=True)
-    meta = dict(scene=a.scene, seq=a.seq, mode=a.mode, n_obs=nch, ckpt=a.ckpt, base_root=str(BASE_ROOT), hop=a.hop, max_depth=md,
+    meta = dict(scene=a.scene, seq=a.seq, mode=a.mode, n_obs=nch, ckpt=str(a.ckpt), base_root=str(BASE_ROOT), hop=a.hop, win=a.win, max_depth=md,
                 window=window, dropout_samples=a.dropout_samples, dropout_kmax=a.dropout_kmax, seed=a.seed,
                 seconds=round(time.time() - t0, 1), n_steps=len(steps))
     np.savez_compressed(out, pred=np.stack(preds), steps=np.array(steps),
