@@ -22,8 +22,11 @@ from e100_table import boot_ci  # noqa: E402
 BAND = 0.03
 
 
+RESULTS = ["E102_baseline_support"]
+
+
 def load(mode, tag, split):
-    f = REPO / "results" / "E102_baseline_support" / f"{mode}{tag}{'' if split == 'test' else '_val'}" / "per_sequence.csv"
+    f = REPO / "results" / RESULTS[0] / f"{mode}{tag}{'' if split == 'test' else '_val'}" / "per_sequence.csv"
     if not f.exists():
         return None
     df = pd.read_csv(f); df["sid"] = df.scene + "/" + df.seq
@@ -39,7 +42,9 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--mode", default="r2")
     ap.add_argument("--tag", default="")
+    ap.add_argument("--results-dir", default="E102_baseline_support")
     a = ap.parse_args()
+    RESULTS[0] = a.results_dir
     df = load(a.mode, a.tag, "test"); dv = load(a.mode, a.tag, "val")
     if df is None:
         print("no test results"); return 1

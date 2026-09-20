@@ -1,0 +1,13 @@
+{
+ "mode": "r8",
+ "pred_dir": "outputs/pred/r8_post",
+ "split": "val",
+ "voxel": "0.1",
+ "stride": "2",
+ "max_depth": "10.0",
+ "convention": "right0",
+ "seeds": "3",
+ "workers": "20",
+ "tag": "_post",
+ "out": "results/E103_confidence"
+}

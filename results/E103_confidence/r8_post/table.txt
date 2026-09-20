@@ -1,0 +1,33 @@
+=== E102 r8_post: 39 test sequences, val yes
+val: F1(all, frac .25) per Δ: cells0.3: 0.593, cells0.6: 0.591, cells1.0: 0.585, cells1.5: 0.579 -> chosen cells0.3; best fraction on val: {'support': 0.5, 'cells0.3': 0.25}
+
+## test, fixed reference, frac 0.25, seed 0: F1@0.2 by N (P/R at N=all)
+support    0.334 0.448 0.528 0.561 0.573 0.573   P/R(all) 0.623/0.535
+cells0.3   0.334 0.453 0.537 0.561 0.578 0.575   P/R(all) 0.606/0.551 <- chosen
+cells0.6   0.334 0.453 0.536 0.559 0.574 0.572   P/R(all) 0.603/0.548
+cells1.0   0.334 0.453 0.532 0.554 0.566 0.566   P/R(all) 0.598/0.543
+cells1.5   0.334 0.453 0.531 0.555 0.556 0.558   P/R(all) 0.588/0.535
+conf_filter50 0.085 0.139 0.190 0.213 0.231 0.239   P/R(all) 0.819/0.142
+conf_mean  0.267 0.374 0.463 0.501 0.521 0.524   P/R(all) 0.641/0.449
+conf_sum   0.315 0.429 0.513 0.548 0.564 0.566   P/R(all) 0.642/0.509
+span       0.334 0.453 0.535 0.559 0.561 0.557   P/R(all) 0.571/0.548
+support_matchE50 0.091 0.147 0.203 0.228 0.246 0.257   P/R(all) 0.840/0.153
+views      0.334 0.453 0.537 0.563 0.580 0.579   P/R(all) 0.610/0.554
+
+## gain over support (paired, fixed ref, frac 0.25): N=4 / 8 / 16 / all, CI at all, verdict
+cells0.3   +0.009 +0.001 +0.004 +0.002  CI[-0.005,+0.009]  no effect   per scene apartment_2:-0.012±0.018, frl_apartment_5:+0.003±0.025, office_4:+0.015±0.016
+cells0.6   +0.008 -0.002 +0.001 -0.001  CI[-0.007,+0.005]  no effect   per scene apartment_2:-0.010±0.015, frl_apartment_5:-0.000±0.019, office_4:+0.006±0.019
+cells1.0   +0.004 -0.007 -0.008 -0.007  CI[-0.013,+0.000]  no effect   per scene apartment_2:-0.015±0.011, frl_apartment_5:-0.011±0.026, office_4:+0.006±0.020
+cells1.5   +0.003 -0.006 -0.017 -0.016  CI[-0.024,-0.007]  no effect   per scene apartment_2:-0.037±0.028, frl_apartment_5:-0.012±0.020, office_4:+0.002±0.020
+conf_filter50 -0.338 -0.348 -0.342 -0.334  CI[-0.358,-0.307]  worse       per scene apartment_2:-0.248±0.073, frl_apartment_5:-0.361±0.049, office_4:-0.385±0.050
+conf_mean  -0.065 -0.059 -0.053 -0.049  CI[-0.065,-0.034]  worse       per scene apartment_2:+0.005±0.028, frl_apartment_5:-0.088±0.037, office_4:-0.055±0.021
+conf_sum   -0.015 -0.013 -0.009 -0.008  CI[-0.013,-0.002]  no effect   per scene apartment_2:+0.011±0.008, frl_apartment_5:-0.022±0.013, office_4:-0.009±0.008
+span       +0.007 -0.002 -0.012 -0.017  CI[-0.027,-0.005]  no effect   per scene apartment_2:-0.039±0.031, frl_apartment_5:-0.015±0.040, office_4:+0.004±0.024
+support_matchE50 -0.325 -0.333 -0.327 -0.317  CI[-0.340,-0.291]  worse       per scene apartment_2:-0.245±0.077, frl_apartment_5:-0.324±0.047, office_4:-0.380±0.051
+views      +0.009 +0.002 +0.006 +0.006  CI[-0.000,+0.011]  no effect   per scene apartment_2:-0.004±0.011, frl_apartment_5:+0.004±0.021, office_4:+0.017±0.016
+
+## frac 0.5: F1(all) support 0.569; cells0.3: 0.568, cells0.6: 0.568, cells1.0: 0.567, cells1.5: 0.567, conf_filter50: 0.336, conf_mean: 0.555, conf_sum: 0.573, span: 0.566, support_matchE50: 0.376, views: 0.568
+
+## frac 0.1: F1(all) support 0.487; cells0.3: 0.512, cells0.6: 0.504, cells1.0: 0.496, cells1.5: 0.485, conf_filter50: 0.131, conf_mean: 0.417, conf_sum: 0.469, span: 0.475, support_matchE50: 0.136, views: 0.515
+
+## subset reference, frac 0.25, F1 at N=4/16/all: support: 0.628/0.586/0.573; cells0.3: 0.622/0.589/0.575; cells0.6: 0.622/0.585/0.572; cells1.0: 0.619/0.577/0.566; cells1.5: 0.620/0.567/0.558; conf_filter50: 0.272/0.244/0.239; conf_mean: 0.574/0.536/0.524; conf_sum: 0.621/0.579/0.566; span: 0.619/0.571/0.557; support_matchE50: 0.288/0.260/0.257; views: 0.622/0.591/0.579

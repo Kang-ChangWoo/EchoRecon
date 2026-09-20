@@ -783,3 +783,57 @@ per-view prediction itself — its per-ray confidence (Stage D: wrong-rate
 84.5 % → 0.8 % across confidence deciles, but weighted fusion gained ≤ 0.01
 *under the moving reference*) — re-scored under the fixed reference at this
 operating point, which is [미확인].
+
+## E103: per-ray confidence under the fixed reference — negative
+
+**Why.** After E100–E102 the only unexhausted signal was the posterior head's
+per-ray confidence, whose Stage D verdict (weighting ±0.01, filtering −0.14 to
+−0.30) was reached under the moving reference at the all-voxel operating
+point. Criteria pre-registered in `results/E100_cause/CRITERIA_E103.md`
+(1321bef). Posterior heads `posterior_r2` / `posterior_r8`, temperatures 1.378 /
+1.302, one pass per step (`src/posterior_predict.py`, GPU 2), rankings on B's
+voxels (`src/baseline_support.py --pred-dir outputs/pred/<mode>_post`),
+numbers `results/E103_confidence/{r2,r8}_post/table.txt`; fraction chosen on
+val (0.25 for r2; for r8 val preferred 0.5 for support, test is read at 0.25
+as the headline and 0.5 is listed).
+
+| fixed ref, top 25 %, F1@0.2, seed 0, N = 4 / 8 / 16 / all (P/R at all) | r2 | r8 |
+|---|---|---|
+| support (count) | .520 / .547 / .557 / .554 (.576/.541) | .528 / .561 / .573 / .573 (.623/.535) |
+| views | .528 / .547 / .562 / .559 | .537 / .563 / .580 / .579 |
+| conf_sum | .506 / .536 / .548 / .549 (.598/.512) | .513 / .548 / .564 / .566 (.642/.509) |
+| conf_mean | .453 / .487 / .504 / .510 (.597/.450) | .463 / .501 / .521 / .524 (.641/.449) |
+| conf_filter50 then top 25 % | .181 / .204 / .221 / .230 (.831/.135) | .190 / .213 / .231 / .239 (.819/.142) |
+| support at conf_filter50's count | .190 / .213 / .233 / .245 (.847/.145) | .203 / .228 / .246 / .257 (.840/.153) |
+| gain over support at all [CI] | conf_sum −0.005 [−.012, +.001]; conf_mean −0.044 [−.059, −.029]; views +0.004 | conf_sum −0.008 [−.013, −.002]; conf_mean −0.049 [−.065, −.034]; views +0.006 |
+| at top 50 % / top 10 %: conf_sum vs support | .539 vs .536 / .478 vs .498 | .573 vs .569 / .469 vs .487 |
+
+Per scene: conf_sum is +0.018 / +0.011 on apartment_2 and −0.020 / −0.022 on
+frl_apartment_5, inside the band either way. The confidence filter loses
+against the support ranking *at the same count* (−0.015 / −0.018), so the
+confidence adds nothing even to the choice of which rays to keep; both
+collapse because a per-view median cut removes the only rays covering the far
+and oblique surfaces (recall .14).
+
+**Reading.** Summing the per-ray confidence ranks voxels no better than
+counting their points (−0.005 / −0.008), averaging it is worse (−0.05: it
+promotes single-ray voxels of confident rays), and filtering by it is worse
+than counting at equal budget. The per-ray confidence is informative *about
+the ray* (Stage D: wrong rate 84.5 % → 0.8 % across deciles) but redundant
+*for the voxel*: the confident rays are the near, frontal ones that already
+carry the highest support, so at the voxel level it re-orders nothing the
+count had not ordered. [미확인]: the rank correlation between conf_sum and
+support per voxel, which would put a number on that redundancy.
+
+**Where E100–E103 leave the project.** With the reference frozen, the
+support-ranked curve rises to N = 16 and saturates at F1 0.56 (r2) / 0.59 (r8),
+precision ≈ 0.6, recall ≈ 0.54, against an oracle ranking of 0.86 on the same
+voxels. Four families of information have now been tested for separating the
+wrong 40 % from the right 60 % — support geometry (count, views, baseline),
+free-space contradiction, front-end time resolution, and per-ray confidence —
+and none moves F1 by 0.03 on both observation sets. The wrong voxels are near
+misses, displacements and hallucinations in equal thirds, shared by
+neighbouring views (r 0.9 below 0.5 m). What is left is not a fusion rule:
+either the observation geometry (wide, continuous trajectories, which this
+data does not have and would need re-rendering), or the per-view predictor
+itself. That is the owner's decision; nothing further was started.
