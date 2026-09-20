@@ -39,7 +39,9 @@ def drops(df, variant, ref, frac=1.0, seed=0):
     c = curve(df, variant, ref, frac=frac, seed=seed)
     if c.empty or 4 not in c.columns:
         return None
-    return pd.DataFrame({"drop16": c[4] - c[16], "dropAll": c[4] - c[-1]}).dropna()
+    out = pd.DataFrame({"drop16": c[4] - c[16]})
+    out["dropAll"] = (c[4] - c[-1]) if -1 in c.columns else np.nan
+    return out.dropna(subset=["drop16"])
 
 
 def boot_ci(x, n=10000, seed=0):
@@ -148,10 +150,12 @@ def main() -> int:
             rec = j.drop16_b - j.drop16_v; ci = boot_ci(rec)
             recA = j.dropAll_b - j.dropAll_v
             c = curve(df, v, ref, frac=a.frac); cb = curve(df, "base", ref, frac=a.frac)
-            flipped = (c[16].mean() >= c[4].mean() - 0.01) and (c[-1].mean() >= c[4].mean() - 0.01)
+            g = lambda cc, n: cc[n].mean() if n in cc.columns else float("nan")
+            flipped = (g(c, 16) >= g(c, 4) - 0.01) and (not (-1 in c.columns) or g(c, -1) >= g(c, 4) - 0.01)
             mark = " *" if any(v == s[0] for s in sel.values()) else ""
             rows.append(dict(variant=v + mark, ref=ref, n=len(j), recovery16=rec.mean(), ci_lo=ci[0], ci_hi=ci[1], recoveryAll=recA.mean(),
-                             F1_4=c[4].mean(), F1_16=c[16].mean(), F1_all=c[-1].mean(), dF1_16=(c[16] - cb[16]).mean(), dF1_all=(c[-1] - cb[-1]).mean(),
+                             F1_4=g(c, 4), F1_16=g(c, 16), F1_all=g(c, -1), dF1_16=(c[16] - cb[16]).mean(),
+                             dF1_all=((c[-1] - cb[-1]).mean() if -1 in c.columns else float("nan")),
                              flipped=flipped, verdict=verdict(rec.mean(), ci)))
     t = pd.DataFrame(rows)
     pd.set_option("display.width", 250)

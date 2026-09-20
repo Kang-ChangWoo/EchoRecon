@@ -1,0 +1,17 @@
+{
+ "mode": "r8",
+ "pred_dir": "/root/storage/implementation/shared_audio/EchoRecon/outputs/pred/r8",
+ "split": "test",
+ "scenes": "None",
+ "voxel": "0.1",
+ "stride": "2",
+ "max_depth": "10.0",
+ "margin": "0.2",
+ "convention": "right0",
+ "seeds": "3",
+ "pairs_per_view": "3000",
+ "workers": "24",
+ "seq_limit": "0",
+ "tag": "",
+ "out": "/root/storage/implementation/shared_audio/EchoRecon/results/E100_cause"
+}

@@ -1,0 +1,58 @@
+=== r8  test sequences 39  frac 1.0  (val: none)
+
+## base curve, seed 0, mean over sequences (F1@0.2 | precision | recall)
+subset  F1  N=  1:0.564 N=  2:0.591 N=  4:0.592 N=  8:0.564 N= 16:0.532 N= -1:0.515
+        P   N=  1:0.515 N=  2:0.513 N=  4:0.487 N=  8:0.446 N= 16:0.408 N= -1:0.390
+        R   N=  1:0.632 N=  2:0.708 N=  4:0.765 N=  8:0.781 N= 16:0.776 N= -1:0.772
+fixed   F1  N=  1:0.468 N=  2:0.538 N=  4:0.566 N=  8:0.553 N= 16:0.529 N= -1:0.515
+        P   N=  1:0.550 N=  2:0.526 N=  4:0.494 N=  8:0.449 N= 16:0.409 N= -1:0.390
+        R   N=  1:0.413 N=  2:0.555 N=  4:0.667 N=  8:0.727 N= 16:0.759 N= -1:0.772
+(e) n_ref(16)/n_ref(4) = 1.57   n_ref(all)/n_ref(4) = 1.71
+(e) base drop16 [subset] mean +0.060  sd over seq 0.035  per scene apartment_2:+0.099±0.026, frl_apartment_5:+0.033±0.023, office_4:+0.055±0.013 | dropAll +0.077
+(e) base drop16 [fixed] mean +0.037  sd over seq 0.028  per scene apartment_2:+0.059±0.025, frl_apartment_5:+0.018±0.025, office_4:+0.038±0.016 | dropAll +0.051
+(e) recovery = drop16(subset) - drop16(fixed) = +0.023  CI [+0.020, +0.027]  -> no effect
+    drop16 [subset] by subset seed: +0.060 +0.054 +0.035
+    drop16 [fixed] by subset seed: +0.037 +0.030 +0.014
+
+## recovery per variant (drop16(base) - drop16(variant), same sequences); curve at N=4/8/16/all
+ variant    ref  n  recovery16  ci_lo  ci_hi  recoveryAll  F1_4  F1_16  F1_all  dF1_16  dF1_all  flipped    verdict
+ compact subset 25       0.053  0.036  0.069          NaN 0.526  0.508     NaN  -0.020      NaN    False meaningful
+ compact  fixed 25       0.056  0.039  0.072          NaN 0.501  0.508     NaN  -0.016      NaN     True meaningful
+ contra0 subset 39       0.011  0.002  0.021        0.015 0.592  0.543   0.530   0.012    0.015    False  no effect
+ contra0  fixed 39       0.015  0.005  0.024        0.020 0.561  0.539   0.530   0.010    0.015    False  no effect
+ contra1 subset 39       0.034  0.026  0.042        0.041 0.607  0.581   0.571   0.049    0.056    False meaningful
+ contra1  fixed 39       0.039  0.031  0.047        0.048 0.573  0.576   0.571   0.047    0.056     True meaningful
+ contra2 subset 39       0.030  0.022  0.037        0.037 0.606  0.575   0.565   0.044    0.051    False  no effect
+ contra2  fixed 39       0.031  0.023  0.039        0.040 0.576  0.571   0.565   0.042    0.051    False meaningful
+smooth15 subset 39       0.003  0.001  0.004        0.003 0.583  0.526   0.509  -0.006   -0.005    False  no effect
+smooth15  fixed 39       0.003  0.002  0.004        0.004 0.556  0.523   0.509  -0.006   -0.005    False  no effect
+ smooth5 subset 39       0.002  0.001  0.003        0.002 0.587  0.529   0.512  -0.003   -0.003    False  no effect
+ smooth5  fixed 39       0.002  0.002  0.003        0.003 0.560  0.526   0.512  -0.003   -0.003    False  no effect
+ smooth9 subset 39       0.002  0.001  0.003        0.003 0.585  0.527   0.511  -0.004   -0.004    False  no effect
+ smooth9  fixed 39       0.003  0.002  0.004        0.003 0.559  0.525   0.511  -0.004   -0.004    False  no effect
+
+## (b) spread (evenly spaced, seed 0) vs compact (consecutive) subsets, same N, F1@0.2
+[subset] N= 4: spread 0.592 (span 3.40 m) - compact 0.526 (span 0.45 m) = +0.066 CI [+0.050,+0.082] n=39
+[subset] N= 8: spread 0.564 (span 3.40 m) - compact 0.524 (span 1.05 m) = +0.040 CI [+0.027,+0.054] n=39
+[subset] N=16: spread 0.532 (span 3.40 m) - compact 0.508 (span 2.25 m) = +0.020 CI [+0.009,+0.034] n=25
+[fixed] N= 4: spread 0.566 (span 3.40 m) - compact 0.501 (span 0.45 m) = +0.064 CI [+0.048,+0.081] n=39
+[fixed] N= 8: spread 0.553 (span 3.40 m) - compact 0.518 (span 1.05 m) = +0.036 CI [+0.023,+0.049] n=39
+[fixed] N=16: spread 0.529 (span 3.40 m) - compact 0.508 (span 2.25 m) = +0.016 CI [+0.005,+0.030] n=25
+(b) precision@0.2 by viewing-angle spread tertile, within support bins (N=all, fixed ref):
+    s2-2       low-spread 0.271 (n 200820)  high-spread 0.360 (n 200820)  diff +0.089
+    s3-4       low-spread 0.390 (n 164897)  high-spread 0.496 (n 164897)  diff +0.106
+    s5-8       low-spread 0.582 (n 98370)  high-spread 0.664 (n 98370)  diff +0.082
+    s9-1000000 low-spread 0.746 (n 64700)  high-spread 0.741 (n 64700)  diff -0.005
+
+## (c) signed-error correlation (pooled Pearson r)
+    within view 1-2deg  : same-plane r 0.994 (raw 0.994, n 2333358), different-plane r 0.976 (raw 0.977), gap +0.018
+    within view 5-10deg : same-plane r 0.920 (raw 0.923, n 1737634), different-plane r 0.499 (raw 0.525), gap +0.421
+    within view 20-30deg: same-plane r 0.538 (raw 0.556, n 908104), different-plane r 0.120 (raw 0.165), gap +0.417
+    cross view baseline all     : r 0.625 (raw 0.637, n 2539584)
+    cross view baseline <0.5m   : r 0.917 (raw 0.920, n 429130)
+    cross view baseline 0.5-1.5m: r 0.791 (raw 0.796, n 811711)
+    cross view baseline >=1.5m  : r 0.420 (raw 0.437, n 1298743)
+
+## (d) contradicted vs uncontradicted voxels (N=all, fixed reference, wrong = >0.2 m from reference)
+    all voxels: contradicted 72.9%, wrong rate contradicted 0.687 vs uncontradicted 0.525, diff +0.161
+    multi-view voxels (s>=2): 53.1% of voxels, contradicted 73.4%, wrong rate contradicted 0.589 vs uncontradicted 0.373, diff +0.217
