@@ -9,6 +9,16 @@ own split. For each ray:
   mass@±5/10/20/30 cm             probability inside a band around the truth
   top-K coverage                  is the true bin among the K most probable
   Wrong-Argmax Rescue@K           P(true bin in top K | argmax wrong by > tol)
+  mode coverage / rescue@K        the same over the K most probable *local maxima*,
+                                  asking whether any mode lands within tol of the
+                                  truth. Bin-based top-K conflates a second mode
+                                  with a wide single peak: the ten most probable
+                                  bins of a unimodal Gaussian already span +-5
+                                  bins, so only the mode version separates
+                                  multimodality from peak width.
+  n_modes                         local maxima above 10 % of the peak
+  mass_given_wrong                probability within tol of the truth, on rays
+                                  whose argmax is wrong
 
 The last is the one the project turns on: when the point estimate is wrong, is
 the right hypothesis still carried by the distribution? The fake Gaussian of
@@ -104,12 +114,37 @@ def main() -> int:
         a.temperature = fit_T(vdl)
         print(f"temperature fitted on val: {a.temperature:.3f}")
 
-    acc = {k: [] for k in ("argmax_mae", "expected_mae", "nll", "brier")}
+    acc = {k: [] for k in ("argmax_mae", "expected_mae", "nll", "brier", "n_modes", "mass_given_wrong")}
     cov = {K: [] for K in KS}
     resc = {K: [] for K in KS}
+    mcov = {K: [] for K in KS}
+    mresc = {K: [] for K in KS}
     mass = {b: [] for b in BANDS}
     fake = {s: {"cov": {K: [] for K in KS}, "resc": {K: [] for K in KS},
-                "mass": {b: [] for b in BANDS}, "nll": []} for s in SIGMAS}
+                "mcov": {K: [] for K in KS}, "mresc": {K: [] for K in KS},
+                "mass": {b: [] for b in BANDS}, "nll": [], "n_modes": [],
+                "mass_given_wrong": []} for s in SIGMAS}
+
+    def mode_mask(p):
+        """True where a bin is a local maximum of the distribution along the bin axis."""
+        left = torch.cat([p[:, :1] - 1, p[:, :-1]], 1)
+        right = torch.cat([p[:, 1:], p[:, -1:] - 1], 1)
+        return (p >= left) & (p >= right)
+
+    def mode_stats(p, depth, m, wrong, centres, tol):
+        """(coverage@K, rescue@K, mean number of modes) using local maxima only."""
+        mm = mode_mask(p)
+        pm = torch.where(mm, p, torch.full_like(p, -1.0))
+        idx = pm.topk(max(KS), dim=1).indices                    # K most probable modes
+        val = pm.gather(1, idx)
+        near = ((centres[idx] - depth.unsqueeze(1)).abs() <= tol) & (val > 0)
+        cov_k, res_k = {}, {}
+        for K in KS:
+            hit = near[:, :K].any(1)
+            cov_k[K] = float(hit[m].float().mean())
+            res_k[K] = float(hit[wrong].float().mean()) if wrong.any() else float("nan")
+        n_modes = (mm & (p >= 0.1 * p.max(1, keepdim=True).values)).sum(1).float()
+        return cov_k, res_k, float(n_modes[m].mean())
     conf_bins = np.zeros(15); conf_hit = np.zeros(15); conf_n = np.zeros(15)
     n_wrong = 0; n_tot = 0
     centres = model.centres
@@ -145,6 +180,12 @@ def main() -> int:
                 cov[K].append(float(inK[m].float().mean()))
                 if wrong.any():
                     resc[K].append(float(inK[wrong].float().mean()))
+            ck, rk, nm = mode_stats(p, depth, m, wrong, centres, a.tol)
+            for K in KS:
+                mcov[K].append(ck[K])
+                if wrong.any():
+                    mresc[K].append(rk[K])
+            acc["n_modes"].append(nm)
             lo_e, hi_e = model.edges[0], model.edges[-1]
             step = (hi_e - lo_e) / model.K
             cdf = torch.zeros(p.shape[0], model.K + 1, *p.shape[2:], device=dev)
@@ -154,6 +195,8 @@ def main() -> int:
                 hi = ((depth + band - lo_e) / step).floor().clamp(0, model.K).long()
                 mm = cdf.gather(1, hi.unsqueeze(1)).squeeze(1) - cdf.gather(1, lo.unsqueeze(1)).squeeze(1)
                 mass[band].append(float(mm[m].mean()))
+                if band == a.tol and wrong.any():
+                    acc["mass_given_wrong"].append(float(mm[wrong].mean()))
             # the fake Gaussian control, on this model's own argmax depth
             for s in SIGMAS:
                 dist = (centres.view(1, -1, 1, 1) - am.unsqueeze(1)) / s
@@ -164,6 +207,12 @@ def main() -> int:
                     fake[s]["cov"][K].append(float(inK[m].float().mean()))
                     if wrong.any():
                         fake[s]["resc"][K].append(float(inK[wrong].float().mean()))
+                ck, rk, nm = mode_stats(pf, depth, m, wrong, centres, a.tol)
+                for K in KS:
+                    fake[s]["mcov"][K].append(ck[K])
+                    if wrong.any():
+                        fake[s]["mresc"][K].append(rk[K])
+                fake[s]["n_modes"].append(nm)
                 ptf = pf.gather(1, k_true.unsqueeze(1)).squeeze(1)
                 fake[s]["nll"].append(float((-ptf.clamp_min(1e-12).log())[m].mean()))
                 cf = torch.zeros_like(cdf); cf[:, 1:] = pf.cumsum(1)
@@ -175,12 +224,17 @@ def main() -> int:
     ece = float(np.sum(conf_n / max(conf_n.sum(), 1) * np.abs(conf_bins / np.maximum(conf_n, 1) - conf_hit / np.maximum(conf_n, 1))))
     res = {"run": a.run, "split": a.split, "temperature": a.temperature, "tol": a.tol,
            "rays": n_tot, "wrong_frac": n_wrong / max(n_tot, 1), "ece": ece,
-           **{k: float(np.mean(v)) for k, v in acc.items()},
+           **{k: (float(np.mean(v)) if v else float("nan")) for k, v in acc.items()},
            "coverage": {str(K): float(np.mean(cov[K])) for K in KS},
            "rescue": {str(K): float(np.mean(resc[K])) if resc[K] else float("nan") for K in KS},
+           "mode_coverage": {str(K): float(np.mean(mcov[K])) for K in KS},
+           "mode_rescue": {str(K): float(np.mean(mresc[K])) if mresc[K] else float("nan") for K in KS},
            "mass": {str(b): float(np.mean(mass[b])) for b in BANDS},
            "fake": {str(s): {"coverage": {str(K): float(np.mean(fake[s]["cov"][K])) for K in KS},
                              "rescue": {str(K): float(np.mean(fake[s]["resc"][K])) if fake[s]["resc"][K] else float("nan") for K in KS},
+                             "mode_coverage": {str(K): float(np.mean(fake[s]["mcov"][K])) for K in KS},
+                             "mode_rescue": {str(K): float(np.mean(fake[s]["mresc"][K])) if fake[s]["mresc"][K] else float("nan") for K in KS},
+                             "n_modes": float(np.mean(fake[s]["n_modes"])),
                              "mass": {str(b): float(np.mean(fake[s]["mass"][b])) for b in BANDS},
                              "nll": float(np.mean(fake[s]["nll"]))} for s in SIGMAS}}
     out = a.out or REPO / "results" / "E21_posterior_rays" / f"{a.run}_{a.split}.json"
@@ -191,12 +245,16 @@ def main() -> int:
           f"NLL {res['nll']:.3f}   Brier {res['brier']:.4f}   ECE {ece:.4f}")
     print(f"  top-K coverage " + "  ".join(f"K={K}: {100*res['coverage'][str(K)]:.1f}%" for K in KS))
     print(f"  rescue@K       " + "  ".join(f"K={K}: {100*res['rescue'][str(K)]:.1f}%" for K in KS))
+    print(f"  mode cov@K     " + "  ".join(f"K={K}: {100*res['mode_coverage'][str(K)]:.1f}%" for K in KS))
+    print(f"  mode rescue@K  " + "  ".join(f"K={K}: {100*res['mode_rescue'][str(K)]:.1f}%" for K in KS)
+          + f"   modes/ray {res['n_modes']:.2f}   mass at truth when argmax wrong {100*res['mass_given_wrong']:.1f}%")
     print(f"  mass in band   " + "  ".join(f"±{int(100*b)}cm: {100*res['mass'][str(b)]:.1f}%" for b in BANDS))
     print("  fake Gaussian of the same argmax:")
     for s in SIGMAS:
         f = res["fake"][str(s)]
         print(f"    sigma {s:.2f}: rescue " + " ".join(f"K={K}:{100*f['rescue'][str(K)]:.1f}%" for K in KS)
-              + f"   mass ±20cm {100*f['mass']['0.2']:.1f}%   NLL {f['nll']:.3f}")
+              + f" | mode rescue " + " ".join(f"K={K}:{100*f['mode_rescue'][str(K)]:.1f}%" for K in KS)
+              + f" | modes/ray {f['n_modes']:.2f}  mass ±20cm {100*f['mass']['0.2']:.1f}%  NLL {f['nll']:.3f}")
     print("wrote", out)
     return 0
 
