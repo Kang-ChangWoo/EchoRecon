@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from erp import quat_to_R, ray_dirs, to_radial
+from erp import face_cos, quat_to_R, ray_dirs, to_radial
 from support_diag import dir_to_pixel
 
 
@@ -56,12 +56,24 @@ def logits_to_cdf(logits: np.ndarray) -> np.ndarray:
 
 
 class ViewPosterior:
-    """One view's posterior plus the pose needed to query it from world space."""
+    """One view's posterior plus the pose needed to query it from world space.
 
-    def __init__(self, cdf: np.ndarray, origin, rotation, H: int, W: int, edges: np.ndarray):
-        self.cdf = cdf; self.H = H; self.W = W; self.edges = edges
+    `space` says what the bins measure. "radial" is Euclidean distance along the
+    ray. "face" is the per-face cubemap z-depth the base model was trained on,
+    which is radial * max(|dx|,|dy|,|dz|); the factor depends only on the ray, so
+    a radial query band [r-tau, r+tau] becomes [(r-tau)c, (r+tau)c] in face
+    space. Converting the query rather than the posterior keeps it exact. Getting
+    this wrong is not subtle: the factor reaches sqrt(3) at a cube corner, which
+    at 5 m is 3.7 m, about 24 times the usual band.
+    """
+
+    def __init__(self, cdf: np.ndarray, origin, rotation, H: int, W: int, edges: np.ndarray,
+                 space: str = "radial"):
+        assert space in ("radial", "face")
+        self.cdf = cdf; self.H = H; self.W = W; self.edges = edges; self.space = space
         self.origin = np.asarray(origin, float)
         self.R = quat_to_R(rotation) if np.asarray(rotation).size == 4 else np.asarray(rotation)
+        self.fc = face_cos(ray_dirs(H, W)).reshape(-1) if space == "face" else None
 
     def band_mass(self, pts: np.ndarray, tau: float, chunk: int = 200_000) -> np.ndarray:
         """Probability that this view places a surface within tau of each point's range."""
@@ -76,8 +88,12 @@ class ViewPosterior:
             d_local = (rel / np.maximum(rng, 1e-9)[:, None]) @ self.R
             row, col = dir_to_pixel(d_local, self.H, self.W)
             flat = row * self.W + col
-            lo = np.clip(np.ceil((rng - tau - lo_e) / step).astype(np.int64), 0, K)
-            hi = np.clip(np.floor((rng + tau - lo_e) / step).astype(np.int64), 0, K)
+            r_lo, r_hi = rng - tau, rng + tau
+            if self.space == "face":
+                c = self.fc[flat]
+                r_lo, r_hi = r_lo * c, r_hi * c
+            lo = np.clip(np.ceil((r_lo - lo_e) / step).astype(np.int64), 0, K)
+            hi = np.clip(np.floor((r_hi - lo_e) / step).astype(np.int64), 0, K)
             m = self.cdf[flat, hi] - self.cdf[flat, lo]
             out[s:s + chunk] = np.where(hi > lo, m, 0.0)
         return out

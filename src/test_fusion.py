@@ -110,6 +110,27 @@ def test_band_mass():
     check("band mass is 0 far from it", np.all(v.band_mass(off, 0.15) < 1e-3))
 
 
+def test_face_space_band():
+    """A posterior whose bins are per-face depth must be queried with the band
+    scaled by the ray's face factor; without it a corner ray is out by sqrt(3)."""
+    H, W = 32, 64
+    edges, _ = depth_bins(512, 0.1, 18.0)
+    d = ray_dirs(H, W, "right0")
+    from erp import face_cos
+    c = face_cos(d)
+    r_true = 3.0
+    face = np.full((H, W), r_true, np.float32) * c              # what a face-depth model predicts
+    v_face = ViewPosterior(gaussian_posterior(face, edges, 0.02), [0, 0, 0], [1, 0, 0, 0], H, W, edges, "face")
+    v_rad = ViewPosterior(gaussian_posterior(face, edges, 0.02), [0, 0, 0], [1, 0, 0, 0], H, W, edges, "radial")
+    dd = d.reshape(-1, 3)
+    corner = int(np.argmin(c.reshape(-1)))                       # the most oblique ray
+    pts = dd * r_true
+    mf = v_face.band_mass(pts, 0.15); mr = v_rad.band_mass(pts, 0.15)
+    check("face-space band mass is 1 at the true range", mf.min() > 0.99, f"min {mf.min():.4f}")
+    check("ignoring the face factor misses the corner ray", mr[corner] < 1e-3,
+          f"corner face factor {c.reshape(-1)[corner]:.3f}, mass {mr[corner]:.4f}")
+
+
 def test_toy_two_wrong_argmaxes():
     """Two views, each with a wrong mode heavier than the true one, but whose true
     modes are the same world point. Point fusion of the argmaxes must miss it;
@@ -160,6 +181,7 @@ def main() -> int:
     test_posterior_normalised()
     test_voxel_indexing()
     test_band_mass()
+    test_face_space_band()
     test_toy_two_wrong_argmaxes()
     bad = [n for n, ok, _ in results if not ok]
     print(f"\n{len(results) - len(bad)}/{len(results)} passed")
