@@ -22,25 +22,28 @@ md 문서의 주장이 아니다.
   <branden.c.w.kang@gmail.com>, 트레일러 `Co-Authored-By: Claude Fable 5.1
   <noreply@anthropic.com>` + `Claude-Session: <세션 URL>`.
 
-## 1. 지금 돌아가고 있는 것 (GPU 1)
+## 1. 지금 돌아가고 있는 것 — 없음
 
-| 작업 | PID | 로그 | 출력 | 예상 종료 |
-|---|---|---|---|---|
-| posterior_r2 재학습 (`--warmup-epochs 4 --lr 5e-5 --epochs 12`) | 554365 | `logs/train_posterior_r2_w4.log` | `outputs/posterior/posterior_r2_w4/{best,last}.pth, history.json` | 약 15:00 (12:45 재시작) |
-| posterior_r8 재학습 (동일 설정) | 554474 | `logs/train_posterior_r8_w4.log` | `outputs/posterior/posterior_r8_w4/` | 약 16:00 (12:45 재시작) |
+소유자 지시(13:40)로 EchoRecon 관련 프로세스는 전부 멈췄다. 재학습
+`posterior_{r2,r8}_w4`는 13:40에 PID로 kill 했고(`outputs/posterior/posterior_*_w4/`
+에 부분 결과가 남아 있으면 신뢰하지 말고 지운 뒤 처음부터 돌릴 것), 아래 명령으로
+다시 시작한다(각 12 epoch, 카드 여유 시 약 2시간):
 
-`ps -eo pid,args | grep "[t]rain_posterior"`로 확인. 죽이려면 PID로 kill
-(pkill -f 는 자기 셸까지 죽인 전력이 있으니 쓰지 말 것). 같은 GPU에서
-av_localization의 DisCo 재학습 두 개(각 2–4 GB)가 며칠간 돈다. 건드리지 말 것.
+    python src/train_posterior.py --mode r2 --run posterior_r2_w4 --gpu 1 --warmup-epochs 4 --lr 5e-5 --epochs 12 --batch-size 4 --accum 4
+    python src/train_posterior.py --mode r8 --run posterior_r8_w4 --gpu 1 --warmup-epochs 4 --lr 5e-5 --epochs 12 --batch-size 4 --accum 4
 
-**12:40 사건**: 첫 시도는 같은 카드에 Stage D 4개를 겹쳐 띄우는 바람에 epoch 4에서 CUDA OOM으로 죽었다(로그 상단에 기록). 12:45에 처음부터 재시작했고, 그 뒤로는 이 카드에 다른 EchoRecon 작업을 띄우지 않는다. 재학습 중에는 Stage D를 동시에 2개 이상 띄우지 말 것(각 3–4 GB).
+같은 GPU 1에서 av_localization의 DisCo 재학습 두 개(각 3.8 GB, PID 1294642·516740)와
+DisCo 재추출 드라이버가 며칠간 돈다. 건드리지 말 것. 죽일 때는 PID로만
+(pkill -f 는 자기 셸까지 죽인 전력이 있다).
+
+**12:40 사건**: 첫 시도는 같은 카드에 Stage D 4개를 겹쳐 띄우는 바람에 epoch 4에서 CUDA OOM으로 죽었다. 재학습 중에는 Stage D를 동시에 2개 이상 띄우지 말 것(각 3–4 GB).
 
 재학습 이유: 기존 head는 backbone이 풀린 첫 epoch(ep2)이 val KL 최소이고
 이후 val KL이 단조 상승(1.35→2.13), argmax MAE는 ep9까지 개선(0.292→0.274).
 즉 ep2 체크포인트는 "보정은 최고, argmax는 덜 익음". 소유자 요구로 warm-up을
 늘리고 backbone lr을 낮춘 재학습을 1회 돌린다. 선택 규칙은 동일(val KL 최소).
 
-## 2. 끝난 것 (커밋 b5611cd 코드로 실행, 결과는 아직 미커밋 — 아래 3번)
+## 2. 끝난 것 (커밋 b5611cd 코드로 실행, 결과는 9bd6fbf에 커밋·push됨)
 
 `results/E30_stage_d/` 아래:
 
@@ -89,10 +92,10 @@ GT-resize 변형(corner11, blockmean)으로 Spearman/AUSE 재계산: 차이 ≤0
 
 ## 3. 다음 세션이 할 일 (순서대로)
 
-1. 지금 결과 커밋: `git add results/E30_stage_d/{r2_v3,r8_v3,r2_v3_val,r8_v3_val,r2_v3_whole} src/stage_d_compare.py HANDOFF.md`
-   → 커밋 "exp: Stage D v3 (pre-registered) ..." → push. v2 디렉터리는
-   출처 불일치를 REPORT에 적은 뒤 삭제하거나 `_superseded`로 이름 변경.
-2. 재학습 완료 확인(`history.json` 12 epoch, best.pth의 epoch·val KL 기록).
+1. v2 디렉터리(`r2_v2`, `r8_v2`, `*_v2_val`)는 출처 불일치를 REPORT에 적은 뒤
+   삭제하거나 `_superseded`로 이름 변경.
+2. 재학습 두 개를 위 1번 명령으로 시작하고 완료 확인(`history.json` 12 epoch,
+   best.pth의 epoch·val KL 기록).
 3. 재학습 head ray 평가:
    `python src/eval_posterior_rays.py --run posterior_r2_w4 --split test --gpu 1 --fit-temperature --batch-size 2`
    (r8_w4 동일). 결과 `results/E21_posterior_rays/posterior_r2_w4_test.json`.
