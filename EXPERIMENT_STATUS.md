@@ -33,8 +33,8 @@ current revision. Updated as work proceeds.
 | E07 | oracle headroom | DONE | `fused.oracle` and the ranked curves | | oracle top-quarter F1 rises with every view, 0.660 -> 0.855, while support peaks at N=4 | keep | Stage A |
 | E10-E15 | robust point fusion | DONE | `results/E10_robust_point/r2/` (3432 rows, 10 families swept, N = 4 and all) | a per-ray consensus (the per-voxel one is inert) | best point-only closes 24 % of the oracle gap at every view, 27 % at N=4; no robust operation beats counting support | STOP CHECK A does not fire | Stage B |
 | E20-E25 | depth posterior | DONE | `outputs/posterior/posterior_r2/`, `results/E21_posterior_rays/posterior_r2_test.json`, `results/E25_fake_posterior/r2/` | r8 head still training; K = 64/256 not swept | argmax MAE 0.246 m (point baseline 0.289); mode rescue@10 8.6 % against the fake Gaussian's 0.0 %; 1.28 modes/ray; fake posterior fusion equals support counting on matched candidates | Stage D | Stage C |
-| E30-E32 | same-backbone comparison | DONE | `results/E30_stage_d/{r2,r8}/` (7020 rows each, N = 1/2/4/8/16/all) | fitted temperature not applied; fb/r6 | point and argmax agree at N=1 (0.572 / 0.576 F1); full posterior falls with N exactly as they do and is worse from N=4 on | CASE 4: hypothesis not supported | Stage D |
-| E40-E43 | posterior fusion | PARTIAL | soft surface consensus implemented and run on two candidate sets | tau and bin sensitivity (E42), truncation study (E43) | posterior fusion beats the point pipeline only at N=1 (0.595 vs 0.572) | sweep tau/bins if the direction continues | Stage D |
+| E30-E32 | same-backbone comparison | DONE | `results/E30_stage_d/{r2,r8}_v2/` (+ `_v2_val`; 10800 rows each; band interpolated, T applied, kept fraction chosen on val) | fb/r6; several view subsets | point and argmax agree at N=1 (0.572 / 0.576 F1); full posterior falls with N exactly as they do and is worse from N=4 on | CASE 4: hypothesis not supported | Stage D |
+| E40-E43 | posterior fusion | PARTIAL | soft surface consensus on two candidate sets, band interpolation fixed, temperature applied, confidence-weighted and confidence-filtered variants | tau and bin sensitivity (E42), truncation study (E43) | posterior fusion beats the point pipeline only at N=1-2 and by <0.02; confidence weighting ±0.01; confidence filtering -0.14 to -0.30 | sweep tau/bins only if the direction continues | Stage D v2 |
 | E50-E51 | free-space ablation | NOT_DONE | | | | Stage E | |
 | E60-E62 | view diversity, shuffle, error correlation | PARTIAL | `support_diag.py` measured delta-restricted support (a diversity proxy) | pose shuffle, duplicate vs diverse views, error correlation against translation/yaw/overlap | delta restriction degrades every score; no evidence of neighbour-shared bias | Stage F | 328d5c9 |
 | E70-E71 | learned fusion | NOT_DONE | | | | Stage G | |
@@ -61,5 +61,5 @@ current revision. Updated as work proceeds.
   therefore cannot penalise a method for missing what no view could see, and it
   is not comparable to DAPS. A mesh-derived occupancy is required for the
   headline table.
-- View subsets are evenly spaced with no seed, so no variance over subset
+- View subsets are evenly spaced with one deterministic subset per N in Stages B-D (Stage A: 3 seeds), so no variance over subset
   choice is available.

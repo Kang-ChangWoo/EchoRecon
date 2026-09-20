@@ -42,6 +42,10 @@ sys.path.insert(0, str(HERE))
 
 NS = (1, 2, 4, 8, 16, 0)
 FRACS = (1.0, 0.5, 0.25, 0.1, 0.05, 0.02)
+# the room grid has ten to a hundred times more candidates than a point cloud,
+# and its optimum sat on the 0.02 edge of the sweep; two smaller fractions
+# bracket it
+FRACS_GRID = FRACS + (0.01, 0.005)
 
 
 def main() -> int:
@@ -153,13 +157,13 @@ def main() -> int:
                                        H, W, edges, space="face") for j in idx]
                 base_row = dict(scene=sc, seq=sq, N_req=(N if N > 0 else -1), N=len(idx))
 
-                def score_and_add(tag, pts, sc_):
+                def score_and_add(tag, pts, sc_, fracs=FRACS, extra=None):
                     order = np.argsort(-sc_)
-                    for fr in FRACS:
+                    for fr in fracs:
                         keep = order[: max(1, int(fr * len(pts)))]
                         m = metrics(pts[keep], ref, voxel=a.voxel)
                         rows.append({**base_row, "method": tag, "frac": fr,
-                                     "n_cand": len(pts), "kept": len(keep), **m})
+                                     "n_cand": len(pts), "kept": len(keep), **(extra or {}), **m})
 
                 vA, cA = voxel_downsample(np.concatenate(cl_A), a.voxel)
                 score_and_add("A_point", vA, cA)
@@ -183,7 +187,7 @@ def main() -> int:
                 vx = a.voxel * max(1.0, (n_est / a.max_cand) ** (1 / 3))
                 cand = candidate_grid(lo, hi, vx)
                 evG = sum(v.band_mass(cand, a.tau_band) for v in views)
-                score_and_add("C_grid", cand, evG)
+                score_and_add("C_grid", cand, evG, FRACS_GRID, {"grid_voxel": float(vx)})
                 errB, _ = cKDTree(ref).query(vB, k=1, workers=-1)
                 score_and_add("oracle", vB, -errB)
             print(f"[{sc}/{sq}] {len(steps)} steps, {len(rows)} rows, {(time.time()-t0)/60:.1f} min", flush=True)

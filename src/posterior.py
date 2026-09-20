@@ -92,11 +92,23 @@ class ViewPosterior:
             if self.space == "face":
                 c = self.fc[flat]
                 r_lo, r_hi = r_lo * c, r_hi * c
-            lo = np.clip(np.ceil((r_lo - lo_e) / step).astype(np.int64), 0, K)
-            hi = np.clip(np.floor((r_hi - lo_e) / step).astype(np.int64), 0, K)
-            m = self.cdf[flat, hi] - self.cdf[flat, lo]
-            out[s:s + chunk] = np.where(hi > lo, m, 0.0)
+            # the cdf is known at bin edges; inside a bin the mass is taken as
+            # uniform, so the band's ends are interpolated rather than rounded to
+            # whole bins. Rounding counted only bins wholly inside the band, which
+            # at K=128 and tau=0.15 shrank the band to about 2.3 of its nominal
+            # 3.9 bins in face space and to one bin or less on 6 % of rays.
+            u_lo = np.clip((r_lo - lo_e) / step, 0.0, float(K))
+            u_hi = np.clip((r_hi - lo_e) / step, 0.0, float(K))
+            out[s:s + chunk] = self._cdf_at(flat, u_hi) - self._cdf_at(flat, u_lo)
         return out
+
+    def _cdf_at(self, flat: np.ndarray, u: np.ndarray) -> np.ndarray:
+        """Cumulative mass at a continuous bin coordinate u in [0, K]."""
+        K = self.cdf.shape[1] - 1
+        k = np.minimum(np.floor(u).astype(np.int64), K - 1)
+        f = (u - k).astype(np.float32)
+        c0 = self.cdf[flat, k]
+        return c0 + f * (self.cdf[flat, k + 1] - c0)
 
 
 def fuse(views, pts: np.ndarray, tau: float = 0.15, weights=None) -> np.ndarray:

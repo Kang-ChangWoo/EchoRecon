@@ -131,6 +131,49 @@ def test_face_space_band():
           f"corner face factor {c.reshape(-1)[corner]:.3f}, mass {mr[corner]:.4f}")
 
 
+def test_band_mass_rotated():
+    """band_mass must agree with unprojection under a non-identity pose: points
+    unprojected from a face-depth map through (R, t) must get mass 1 back from
+    a delta posterior at that map, queried in world space through the same pose."""
+    H, W = 32, 64
+    edges, _ = depth_bins(128, 0.1, 10.0)
+    rng = np.random.default_rng(3)
+    d = ray_dirs(H, W, "right0")
+    from erp import face_cos
+    c = face_cos(d)
+    worst = 0.0
+    for _ in range(5):
+        q = rng.normal(size=4); q /= np.linalg.norm(q)
+        t = rng.normal(size=3) * 2
+        R = quat_to_R(q)
+        rad = rng.uniform(1.0, 6.0, size=(H, W)).astype(np.float32)
+        face = rad * c
+        v = ViewPosterior(gaussian_posterior(face, edges, 0.01), t, q, H, W, edges, "face")
+        pts_cam = d.reshape(-1, 3) * rad.reshape(-1, 1)
+        pts_world = pts_cam @ R.T + t
+        m = v.band_mass(pts_world, 0.15)
+        worst = max(worst, float(1.0 - m.min()))
+    check("band mass under random poses matches unprojection", worst < 0.02, f"worst deficit {worst:.4f}")
+
+
+def test_band_mass_fractional():
+    """A band narrower than one bin must still see the mass in proportion, not zero."""
+    H, W = 4, 8
+    edges, _ = depth_bins(128, 0.1, 10.0)          # bin 0.0773 m
+    step = float(edges[1] - edges[0])
+    dep = np.full((H, W), 3.0, np.float32)
+    # a posterior uniform over four bins around 3 m
+    K = 128
+    p = np.zeros((H * W, K), np.float32)
+    k0 = int((3.0 - edges[0]) / step)
+    p[:, k0 - 2:k0 + 2] = 0.25
+    cdf = np.zeros((H * W, K + 1), np.float32); np.cumsum(p, axis=1, out=cdf[:, 1:])
+    v = ViewPosterior(cdf, [0, 0, 0], [1, 0, 0, 0], H, W, edges)
+    d = ray_dirs(H, W, "right0").reshape(-1, 3)
+    m = v.band_mass(d[:4] * 3.0, 0.5 * step)        # band = one bin wide
+    check("sub-bin band keeps proportional mass", np.allclose(m, 0.25, atol=0.02), f"{m[:2]}")
+
+
 def test_toy_two_wrong_argmaxes():
     """Two views, each with a wrong mode heavier than the true one, but whose true
     modes are the same world point. Point fusion of the argmaxes must miss it;
@@ -182,6 +225,8 @@ def main() -> int:
     test_voxel_indexing()
     test_band_mass()
     test_face_space_band()
+    test_band_mass_rotated()
+    test_band_mass_fractional()
     test_toy_two_wrong_argmaxes()
     bad = [n for n, ok, _ in results if not ok]
     print(f"\n{len(results) - len(bad)}/{len(results)} passed")

@@ -180,8 +180,16 @@ evidence is the better precision ranking at the extreme tail and slightly worse
 everywhere that matters. Neither recovers the oracle gap. So STOP CHECK B's
 first half is settled before any training: **soft accumulation of a blurred
 point buys nothing.** If a learned posterior helps later, the credit belongs to
-the shape of the distribution, not to softness. The earlier "-55 %" figure was
-an artefact of the mismatched candidate sets and is withdrawn.
+the shape of the distribution, not to softness. The earlier "-55 %" figure is
+withdrawn; its cause was found in a later audit (2026-09-20) and was not the
+candidate-set mismatch this section first blamed: the run's summary averaged
+the fake rows over all eight kept fractions before taking the best per method,
+while the support rows were already per fraction. Summarised per operating
+point (`results/E25_fake_posterior/r2/metrics.json`, regenerated), the fake
+posterior at its own best fraction is 0.540 on matched candidates and 0.539 on
+the room grid against support 0.562 at every view, and 0.590 / 0.570 against
+0.611 at N=4: about -8 % to -20 % of the oracle gap, never positive. The table
+above, which was computed per fraction from the start, is unchanged.
 
 ---
 
@@ -385,3 +393,124 @@ evidence would be smoother still; the direction of the effect on the ranking is
 not obvious and has to be measured. And the room grid's bounding box was taken
 from the reference and B's voxels together; the reference is ground truth and
 should not set even the box. Both are fixed in the next run.
+
+---
+
+## Stage D, second run (v2): after the audit fixes, plus per-view confidence before fusion
+
+**Why.** A read-only audit (2026-09-20) of Stages A-D found three things that all
+leaned against the posterior: band mass counted only bins wholly inside the
+band (at K=128 and tau=0.15 the band shrank to about 2.3 of its 3.9 nominal
+bins in face space, to one bin or less on 6 % of rays), the softmax temperature
+was fitted on 48 frames of one validation scene and then not applied in Stage
+D at all, and the room-grid box borrowed its extent from the reference. It also
+found that the kept fraction was chosen on the test sequences, that the grid's
+optimum at N=1 sat on the edge of the sweep, and that the Stage B2 "-55 %"
+line came from a summary bug (corrected above). The owner separately asked
+whether a confidence for each 2-D depth map should be estimated *before* any
+3-D fusion. All of this is answered by one re-run.
+
+**What changed.** `posterior.ViewPosterior` interpolates the cdf at the band
+ends (unit tests: sub-bin band keeps proportional mass; random poses
+round-trip to 0.003). The temperature is refitted on 1,000 rays from every
+validation frame (r2 1.378, r8 1.302; previously 1.462 / 1.343) and applied.
+The grid box comes from the predictions only, and the grid sweep goes down to
+0.005. Validation-scene sequences were predicted (37 sequences) and every
+method's kept fraction is now chosen there (`src/select_frac.py`); the test
+number at that fraction is reported. Two new rankings use the per-ray
+confidence c = max softmax probability after temperature: **D** ranks B's
+voxels by the *sum of c* over the rays that hit them instead of the ray count,
+and **E** drops each view's rays below its 50th / 75th confidence percentile
+before counting. Ray-level confidence-versus-error is recorded on 18.5 M test
+rays per model. Runs: `results/E30_stage_d/{r2,r8}_v2` (test),
+`{r2,r8}_v2_val` (validation), 10,800 rows each, one deterministic evenly
+spaced view subset per N as before.
+
+**Ray level: confidence is a good error predictor.** Spearman between
+confidence and argmax error is -0.66 (r2) / -0.65 (r8). The fraction of rays
+wrong by more than 0.2 m falls from 84 % in the lowest confidence decile to
+0.8 % in the highest (r2; r8 83 % to 0.6 %). Keeping the most confident half of
+the rays cuts MAE from 0.321 m to 0.081 m, against 0.033 m for an oracle
+ordering by true error (AUSE 0.054 m; r8 0.277 → 0.072, AUSE 0.048). On the
+validation scenes the same holds (Spearman -0.61 / -0.59).
+
+**Fusion level: test F1@0.2 at the validation-selected kept fraction.**
+(The test-side maximum differs from these by at most 0.015, so the earlier
+test-chosen numbers were not materially optimistic.)
+
+r2:
+
+| method | N=1 | 2 | 4 | 8 | 16 | all |
+|---|---|---|---|---|---|---|
+| A point | 0.572 | 0.600 | 0.610 | 0.592 | 0.574 | 0.562 |
+| B argmax | 0.576 | 0.600 | 0.609 | 0.596 | 0.570 | 0.556 |
+| C posterior, on B's voxels | 0.574 | 0.602 | 0.605 | 0.570 | 0.537 | 0.520 |
+| C posterior, room grid | 0.591 | 0.612 | 0.597 | 0.559 | 0.526 | 0.512 |
+| D confidence-weighted support | 0.588 | 0.613 | 0.617 | 0.590 | 0.557 | 0.549 |
+| E drop least-confident 50 % of rays | 0.424 | 0.449 | 0.473 | 0.443 | 0.412 | 0.400 |
+| E drop least-confident 75 % | 0.268 | 0.285 | 0.320 | 0.293 | 0.268 | 0.258 |
+| oracle | 0.719 | 0.770 | 0.834 | 0.859 | 0.867 | 0.861 |
+
+r8:
+
+| method | N=1 | 2 | 4 | 8 | 16 | all |
+|---|---|---|---|---|---|---|
+| A point | 0.614 | 0.642 | 0.651 | 0.631 | 0.603 | 0.590 |
+| B argmax | 0.604 | 0.630 | 0.636 | 0.614 | 0.586 | 0.574 |
+| C posterior, on B's voxels | 0.589 | 0.619 | 0.621 | 0.592 | 0.564 | 0.549 |
+| C posterior, room grid | 0.614 | 0.633 | 0.614 | 0.577 | 0.547 | 0.532 |
+| D confidence-weighted support | 0.613 | 0.638 | 0.642 | 0.617 | 0.589 | 0.573 |
+| E drop least-confident 50 % | 0.435 | 0.463 | 0.485 | 0.454 | 0.426 | 0.412 |
+| E drop least-confident 75 % | 0.277 | 0.299 | 0.328 | 0.303 | 0.280 | 0.271 |
+| oracle | 0.745 | 0.777 | 0.837 | 0.855 | 0.855 | 0.848 |
+
+**Reading.**
+
+1. *The three fixes did not change the Stage D conclusion.* With the band
+   interpolated, the temperature applied and the box clean, the full posterior
+   still peaks at N=2-4 and falls, and from N=4 on is below the argmax of the
+   same distribution by 0.01-0.04 (r2 all views 0.520 against 0.556; r8 0.549
+   against 0.574). The audit's worry that the bugs had piled up against C is
+   settled: they had not. CASE 4 stands.
+2. *Per-ray confidence is real but does not move the curve.* Weighting the
+   support count by confidence (D) is within ±0.01 of plain counting at every
+   N, peaks at N=4 like everything else, and falls after. It is the best
+   non-oracle ranking at N=1-4 for r2 by 0.006-0.016, which is inside the
+   spread between view subsets seen in Stage A (0.03).
+3. *Filtering by confidence is much worse, and the reason is the finding.* At
+   N=4 (r2) dropping the least-confident half of each view's rays raises
+   precision@0.2 from 0.685 to 0.770 but cuts recall from 0.556 to 0.345 and
+   completeness from 0.51 m to 0.97 m, because the low-confidence rays are the
+   far and oblique surfaces and nothing else covers them. The confident half of
+   the rays is accurate (MAE 0.08 m) yet only 77 % of its *voxels* are within
+   0.2 m of the reference: correct rays pile into shared voxels while the few
+   wrong ones scatter into voxels of their own, so a 3 % ray error rate
+   becomes a 23 % voxel error rate. That amplification is what the support
+   count already corrects, which is why nothing built on confidence can beat
+   it by much.
+4. *What the answer to the owner's question is.* Estimating uncertainty per
+   2-D depth map first is worth doing for what it tells you — it separates
+   wrong rays well, cheaply, with a head that already exists — but not as a
+   pre-filter for 3-D fusion on this data: the rays it would remove are the
+   only source of the surfaces that make up half the reference. The binding
+   constraint is the single-view predictor on far and oblique rays, not the
+   fusion rule, and no reweighting of the same rays recovers what those rays
+   do not carry. The oracle's rise with N shows the missing surfaces are
+   *present* in the union of predictions at some views; the problem is that
+   each such view also brings wrong surfaces at the same rate, and no
+   per-ray or per-voxel signal tried so far tells them apart.
+
+**Disclosures that were missing.** The reference for each N is the fused ground
+truth of the same N views, so each column is measured against its own
+reference; "F1 falls with N" means the prediction worsens relative to what
+those views could have reconstructed. All Stage B-D numbers use one
+deterministic view subset per N (seed 0, evenly spaced); Stage A's three
+seeds put the subset-to-subset spread at about 0.03 F1, comparable to the
+differences between the non-oracle methods here. The room grid is coarsened
+to at most 0.121 m on 32 % (r2) / 14 % (r8) of C_grid rows, which makes its
+IoU and 0.1 m metrics not strictly comparable to the point-cloud methods;
+F1@0.2 ordering is unaffected. The Stage D oracle is computed on B's voxels
+and is the ceiling for A/B/C_on_B/D/E, not for C_grid. The posterior head's
+"initialisation from the point head" is a uniform start, not a warm start
+(`src/posterior_head.py`). The earlier Stage D tables (`results/E30_stage_d/{r2,r8}`)
+are the T=1, whole-bin version and are kept for the record.

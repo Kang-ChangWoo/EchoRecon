@@ -90,11 +90,12 @@ def main() -> int:
         opt = torch.optim.LBFGS([logT], max_iter=40)
         rng = torch.Generator().manual_seed(0)
         L, KK = [], []
-        per_batch = 20000
+        # every validation frame contributes a small sample of rays, so the scalar
+        # is fitted across all three validation scenes rather than the first few
+        # frames of one (the loader is not shuffled)
+        per_batch = 1000
         with torch.no_grad():
             for i, b in enumerate(loader):
-                if i >= 12:
-                    break
                 lg = model(b["spec"].to(dev), view_poses=poses).float()
                 d = (b["depth"].to(dev) * md).squeeze(1)
                 msk = b["mask"].to(dev).squeeze(1).bool()
@@ -201,10 +202,18 @@ def main() -> int:
             step = (hi_e - lo_e) / model.K
             cdf = torch.zeros(p.shape[0], model.K + 1, *p.shape[2:], device=dev)
             cdf[:, 1:] = p.cumsum(1)
+            def cdf_at(u):
+                # continuous bin coordinate: mass inside a bin is taken as uniform,
+                # so band ends are interpolated instead of rounded to whole bins
+                k = u.floor().clamp(0, model.K - 1).long()
+                f = u - k.float()
+                c0 = cdf.gather(1, k.unsqueeze(1)).squeeze(1)
+                c1 = cdf.gather(1, (k + 1).unsqueeze(1)).squeeze(1)
+                return c0 + f * (c1 - c0)
             for band in BANDS:
-                lo = ((depth - band - lo_e) / step).ceil().clamp(0, model.K).long()
-                hi = ((depth + band - lo_e) / step).floor().clamp(0, model.K).long()
-                mm = cdf.gather(1, hi.unsqueeze(1)).squeeze(1) - cdf.gather(1, lo.unsqueeze(1)).squeeze(1)
+                u_lo = ((depth - band - lo_e) / step).clamp(0, model.K)
+                u_hi = ((depth + band - lo_e) / step).clamp(0, model.K)
+                mm = cdf_at(u_hi) - cdf_at(u_lo)
                 mass[band].append(float(mm[m].mean()))
                 if band == a.tol and wrong.any():
                     acc["mass_given_wrong"].append(float(mm[wrong].mean()))

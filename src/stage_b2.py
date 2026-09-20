@@ -136,7 +136,15 @@ def main() -> int:
     import pandas as pd
     df = pd.DataFrame(rows)
     df.to_csv(out / "per_sequence.csv", index=False)
-    keys = ["N_req", "method", "param"]
+    # the kept fraction is part of the operating point: averaging over it before
+    # taking the best per method (as an earlier version did) mixed eight
+    # fractions into one number and produced the withdrawn -55 % line
+    # `param` is the requested fraction for support/oracle but sigma for the fake
+    # rows, whose fraction is only in the achieved `kept_frac`; snap it back to
+    # the requested value so every method is summarised per operating point
+    fr = np.array(sorted(FRACS))
+    df["frac_req"] = fr[np.abs(np.log(df["kept_frac"].clip(1e-6).values[:, None]) - np.log(fr)[None, :]).argmin(1)]
+    keys = ["N_req", "method", "param", "frac_req"]
     num = [c for c in df.select_dtypes("number").columns if c not in keys]
     agg = df.groupby(keys)[num].mean().reset_index()
     agg.to_csv(out / "aggregate.csv", index=False)
