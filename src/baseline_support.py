@@ -41,13 +41,16 @@ def one_sequence(job):
     if not pf.exists():
         return []
     z = np.load(pf); P_face = z["pred"].astype(np.float32); steps = z["steps"].tolist()
+    C = z["conf"].astype(np.float32) if "conf" in z.files else None      # E103: per-ray confidence
     S = Sequence(sc, sq); T = len(steps); H, W = P_face.shape[1:]
     dirs = ray_dirs(H, W, a["convention"]); dirs_s = dirs[::stride, ::stride]
-    origins, clouds, gts = [], [], []
+    origins, clouds, gts, confs = [], [], [], []
     for k, i in enumerate(steps):
         pose = S.pose(i); R = quat_to_R(pose["rotation"]); o = np.asarray(pose["position"], float); origins.append(o)
         d = to_radial(P_face[k], dirs, "face")[::stride, ::stride]; v = np.isfinite(d) & (d > 0) & (d < md)
         clouds.append((dirs_s[v] * d[v][:, None]) @ R.T + o)
+        if C is not None:
+            confs.append(C[k][::stride, ::stride][v])
         g = to_radial(resize_nearest(S.gt_depth(i, "face"), (H, W)), dirs, "face")[::stride, ::stride]
         gv = np.isfinite(g) & (g > 0) & (g < md)
         gts.append((dirs_s[gv] * g[gv][:, None]) @ R.T + o)
@@ -78,6 +81,11 @@ def one_sequence(job):
             mx = np.full(nv, -np.inf); mn = np.full(nv, np.inf)
             np.maximum.at(mx, vox_of, proj[view_of]); np.minimum.at(mn, vox_of, proj[view_of])
             scores["span"] = (mx - mn) + 1e-3 * cnt
+            if C is not None:
+                cpts = np.concatenate([confs[j] for j in idx])
+                csum = np.bincount(inv, weights=cpts, minlength=nv)
+                scores["conf_sum"] = csum
+                scores["conf_mean"] = csum / cnt + 1e-6 * cnt
             base = dict(scene=sc, seq=sq, n_steps=T, N_req=(N if N > 0 else -1), N=len(idx), seed=seed, n_vox=nv)
             for name, sc_ in scores.items():
                 order = np.argsort(-sc_, kind="stable")
@@ -88,6 +96,17 @@ def one_sequence(job):
                     for rn, ref in refs.items():
                         m = metrics(pos[keep], ref, voxel=voxel)
                         rows.append({**base, "ranking": name, "frac": fr, "ref": rn, **m})
+            if C is not None:
+                # per-view median-confidence filter before voxelising (Stage D's E50), and the
+                # support ranking at the same kept count
+                kept = [clouds[j][confs[j] >= np.median(confs[j])] for j in idx if len(confs[j])]
+                _, posE, cntE, _ = voxelize(np.concatenate(kept), voxel)
+                orderE = np.argsort(-cntE, kind="stable"); orderS = np.argsort(-cnt, kind="stable")
+                for fr in FRACS:
+                    kE = max(1, int(fr * len(posE)))
+                    for rn, ref in refs.items():
+                        rows.append({**base, "ranking": "conf_filter50", "frac": fr, "ref": rn, "n_vox": len(posE), **metrics(posE[orderE[:kE]], ref, voxel=voxel)})
+                        rows.append({**base, "ranking": "support_matchE50", "frac": fr, "ref": rn, **metrics(pos[orderS[:kE]], ref, voxel=voxel)})
     return rows
 
 
