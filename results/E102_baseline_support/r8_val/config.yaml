@@ -1,0 +1,13 @@
+{
+ "mode": "r8",
+ "pred_dir": "/root/storage/implementation/shared_audio/EchoRecon/outputs/pred/r8",
+ "split": "val",
+ "voxel": "0.1",
+ "stride": "2",
+ "max_depth": "10.0",
+ "convention": "right0",
+ "seeds": "3",
+ "workers": "20",
+ "tag": "",
+ "out": "/root/storage/implementation/shared_audio/EchoRecon/results/E102_baseline_support"
+}

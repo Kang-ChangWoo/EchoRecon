@@ -737,3 +737,49 @@ between views far enough apart to be independent (E100 (c): r 0.9 below
 **[미확인].** Val split not run (no hyper-parameter); the same analysis on the
 short-window models; whether the hallucinated third is stable across scenes
 (per-scene split of H2 not printed).
+
+## E102: baseline-aware support — negative
+
+**Why.** E101 pointed at agreement between far-apart views as the remedy
+family. E102 tests it as one knob: rank voxels by the number of Δ-long
+trajectory cells occupied by the views that agree on the voxel (`cells<Δ>`),
+against the point count (`support`, Stage A), the distinct-view count
+(`views`) and the span of the agreeing views. Criteria pre-registered in
+`results/E100_cause/CRITERIA_E102.md` (c135307); Δ and the kept fraction chosen
+on val; test read once. Code `src/baseline_support.py`, numbers
+`results/E102_baseline_support/{r2,r8}/table.txt`.
+
+| fixed ref, top 25 %, F1@0.2, seed 0 | N=1 | 2 | 4 | 8 | 16 | all | P/R at all | gain over support at all [CI] |
+|---|---|---|---|---|---|---|---|---|
+| r2 support (control) | .302 | .426 | .511 | .541 | .558 | .561 | .595/.537 | |
+| r2 cells0.6 (val choice) | .302 | .435 | .524 | .547 | .558 | .560 | .572/.556 | −0.001 [−.007, +.007] |
+| r2 views | .302 | .435 | .524 | .548 | .565 | .565 | .583/.555 | +0.004 [−.001, +.009] |
+| r2 cells1.5 / span | | | .519/.524 | .548/.552 | .549/.551 | .541/.544 | | −0.020 / −0.017 (CIs below 0) |
+| r8 support | .327 | .447 | .532 | .568 | .586 | .590 | .650/.545 | |
+| r8 cells0.3 (val choice) | .327 | .455 | .541 | .571 | .593 | .593 | .630/.565 | +0.003 [−.005, +.011] |
+| r8 views | .327 | .455 | .541 | .573 | .596 | .595 | .632/.568 | +0.006 [−.001, +.013] |
+| r8 cells1.5 / span | | | .543/.542 | .569/.570 | .576/.576 | .573/.572 | | −0.016 / −0.018 (CIs below 0) |
+
+Every gain is inside the 0.03 band on both sets (verdict **no effect**), the
+distance rule gets *worse* as Δ grows (cells1.5, span: −0.02, CI below 0,
+driven by apartment_2 −0.05), and the only rule that is never worse is
+`views` (+0.004 / +0.006), i.e. counting views instead of points, with no
+distance in it. At the top 10 % the picture is the same order (views ≈
+cells0.3 > support by 0.02–0.03, still inside the band); at the top 50 % all
+rankings coincide.
+
+**Reading.** The voxels that far-apart views agree on are already the
+top-support voxels; requiring the agreement to span a baseline only removes
+correct near-field voxels (precision falls .595→.572 while recall rises
+.537→.556: the rule trades one for the other and F1 does not move). E101's
+mechanism (neighbouring views leak imprecise unsupported voxels) is real, but
+it is already absorbed by the support ranking, which is why the fixed-reference
+top-25 % curve does not fall in the first place. After E100–E102 no geometric
+statistic of the fused cloud (support, contradiction, view count, baseline)
+separates the wrong voxels beyond what point counting does, while the oracle
+ranking on the same voxels reaches 0.86: the information that separates them is
+not in the geometry of the predictions. The next lever has to come from the
+per-view prediction itself — its per-ray confidence (Stage D: wrong-rate
+84.5 % → 0.8 % across confidence deciles, but weighted fusion gained ≤ 0.01
+*under the moving reference*) — re-scored under the fixed reference at this
+operating point, which is [미확인].

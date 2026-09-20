@@ -1,0 +1,25 @@
+=== E102 r8: 39 test sequences, val yes
+val: F1(all, frac .25) per Δ: cells0.3: 0.595, cells0.6: 0.593, cells1.0: 0.590, cells1.5: 0.581 -> chosen cells0.3; best fraction on val: {'support': 0.5, 'cells0.3': 0.25}
+
+## test, fixed reference, frac 0.25, seed 0: F1@0.2 by N (P/R at N=all)
+support    0.327 0.447 0.532 0.568 0.586 0.590   P/R(all) 0.650/0.545
+cells0.3   0.327 0.455 0.541 0.571 0.593 0.593   P/R(all) 0.630/0.565 <- chosen
+cells0.6   0.327 0.455 0.541 0.567 0.588 0.589   P/R(all) 0.625/0.563
+cells1.0   0.327 0.455 0.541 0.567 0.578 0.582   P/R(all) 0.614/0.559
+cells1.5   0.327 0.455 0.543 0.569 0.576 0.573   P/R(all) 0.605/0.552
+span       0.327 0.455 0.542 0.570 0.576 0.572   P/R(all) 0.587/0.563
+views      0.327 0.455 0.541 0.573 0.596 0.595   P/R(all) 0.632/0.568
+
+## gain over support (paired, fixed ref, frac 0.25): N=4 / 8 / 16 / all, CI at all, verdict
+cells0.3   +0.009 +0.003 +0.007 +0.003  CI[-0.005,+0.011]  no effect   per scene apartment_2:-0.011±0.023, frl_apartment_5:+0.007±0.029, office_4:+0.012±0.019
+cells0.6   +0.010 -0.001 +0.001 -0.001  CI[-0.009,+0.008]  no effect   per scene apartment_2:-0.010±0.012, frl_apartment_5:+0.002±0.032, office_4:+0.005±0.030
+cells1.0   +0.010 -0.001 -0.008 -0.008  CI[-0.018,+0.002]  no effect   per scene apartment_2:-0.024±0.019, frl_apartment_5:-0.003±0.036, office_4:+0.001±0.031
+cells1.5   +0.011 +0.001 -0.010 -0.016  CI[-0.028,-0.005]  no effect   per scene apartment_2:-0.049±0.041, frl_apartment_5:+0.001±0.028, office_4:-0.005±0.025
+span       +0.010 +0.002 -0.010 -0.018  CI[-0.032,-0.003]  no effect   per scene apartment_2:-0.046±0.042, frl_apartment_5:-0.004±0.048, office_4:-0.006±0.033
+views      +0.009 +0.005 +0.010 +0.006  CI[-0.001,+0.013]  no effect   per scene apartment_2:-0.007±0.020, frl_apartment_5:+0.008±0.024, office_4:+0.016±0.015
+
+## frac 0.5: F1(all) support 0.585; cells0.3: 0.584, cells0.6: 0.585, cells1.0: 0.585, cells1.5: 0.586, span: 0.582, views: 0.585
+
+## frac 0.1: F1(all) support 0.485; cells0.3: 0.519, cells0.6: 0.514, cells1.0: 0.500, cells1.5: 0.492, span: 0.486, views: 0.518
+
+## subset reference, frac 0.25, F1 at N=4/16/all: support: 0.635/0.600/0.590; cells0.3: 0.626/0.605/0.593; cells0.6: 0.627/0.599/0.589; cells1.0: 0.629/0.590/0.582; cells1.5: 0.633/0.587/0.573; span: 0.626/0.586/0.572; views: 0.626/0.608/0.595
