@@ -257,3 +257,95 @@ the trade is recorded here.
 **Next.** Stage D, the comparison the project exists for, on one backbone:
 point regression to fusion, distribution to argmax to point fusion, and full
 posterior fusion, over the view-count curve.
+
+---
+
+## Stage D (E30-E32, E40-E42): point, argmax and full posterior on one backbone
+
+**Hypothesis under test.** The project's central claim. If collapsing an
+ambiguous echo into a point depth is what makes extra views harmful, then
+keeping the distribution and aligning it in world space should turn the
+view-count curve from falling into rising, while taking the argmax of the same
+distribution should reproduce the falling curve.
+
+**Implementation.** `src/stage_d.py`, one backbone, three readouts, the same
+sequences, the same metric set, the same kept-fraction sweep.
+
+- **A point** — the base model's point regression, unprojected, voxels ranked by
+  cross-view support.
+- **B argmax** — the posterior head's argmax depth through exactly the same
+  pipeline, so A and B differ only in which network produced the depth.
+- **C posterior** — the full distribution, soft surface consensus
+  (`O_i(x)` summed over views, no free-space carving), ranked by accumulated
+  evidence. Scored on two candidate sets: `C_on_B`, exactly the voxels B
+  proposes, which isolates soft evidence from hard counting, and `C_grid`, a
+  voxel grid over the room, which lets the posterior support geometry no argmax
+  proposed.
+
+The posterior's bins are per-face cubemap depth, so the radial query band is
+scaled by each ray's face factor; a unit test shows that skipping this loses the
+most oblique ray entirely (factor 0.596). 7,020 rows, 39 sequences.
+
+**Result.** Best F1@0.2 over the kept-fraction sweep:
+
+| method | N=1 | 2 | 4 | 8 | 16 | all |
+|---|---|---|---|---|---|---|
+| A point | 0.572 | 0.600 | **0.611** | 0.592 | 0.574 | 0.562 |
+| B argmax | 0.576 | 0.600 | **0.618** | 0.596 | 0.570 | 0.556 |
+| C posterior, on B's voxels | 0.563 | 0.596 | 0.608 | 0.573 | 0.543 | 0.526 |
+| C posterior, room grid | **0.595** | **0.606** | 0.600 | 0.568 | 0.538 | 0.524 |
+| oracle | 0.719 | 0.770 | 0.834 | 0.859 | 0.867 | 0.861 |
+
+At N=4 the operating points are: A F1 0.611 (accuracy 0.247, completeness
+0.513), B 0.618 (0.253 / 0.452), C_on_B 0.608 (0.317 / 0.398), C_grid 0.600
+(0.359 / 0.358), oracle 0.834 (0.055 / 0.265).
+
+**Reading. The central hypothesis is not supported.**
+
+E31 is satisfied, which makes the comparison clean: at N=1 the point model and
+the posterior's argmax are the same predictor to within 0.004 F1 (0.572 against
+0.576), so any difference at higher N belongs to the representation and not to
+one network being better.
+
+Keeping the distribution does not change the shape of the curve. C peaks at
+N=2-4 and falls exactly as A and B do, and from N=4 on it is *worse* than the
+argmax of the same distribution (0.526 against 0.556 at every view). The
+predicted pattern — point falling, argmax falling, full posterior rising — does
+not appear in any column. This is the plan's CASE 4, and in a stronger form than
+CASE 4 describes: preserving the posterior is not merely equivalent to
+collapsing it, it costs something once several views are accumulated.
+
+There is one real but small effect in the predicted direction. With a single
+view, posterior fusion over the room grid is the best of the four (0.595 against
+0.572), because it can place surface where no argmax landed. That advantage is
+gone by N=4 and reversed after.
+
+Why it fails is consistent with Stage C. Only 8.6 % of wrong rays carry a
+correct second mode, so there is little right-place mass for views to reinforce,
+while the bulk of each posterior's mass sits around its own argmax — which is
+wrong on 26.5 % of rays. Summing that mass over many views accumulates
+wrong-place evidence smoothly, whereas counting points at least demands a hard
+coincidence in one 10 cm voxel before it credits anything. Softness helps when
+the truth is inside the spread and hurts when it is not, and here it is not,
+often enough to lose.
+
+**What still stands.** The oracle keeps rising with every view, 0.719 to 0.867,
+so the material for a better reconstruction does accumulate. Nothing tried so
+far — robust point fusion (24 % of the gap), a fake Gaussian posterior (0 %), a
+learned posterior (negative) — converts it into a usable ranking.
+
+**Failure to note.** C's parameters are not tuned. tau is fixed at 0.15 m, bins
+at 128, no truncation study, weights uniform, and the room grid is coarsened
+when a sequence's bounding box is large. E42 and E43 are therefore not done, and
+it is possible, though not indicated by anything measured, that a different tau
+or a finer grid changes the ordering. What is not in doubt is the *shape*: no
+setting of tau changes that C falls with N in the same way A and B do.
+
+**Next.** This is a decision point for the owner, not one the agent should take.
+Three directions remain open and they are mutually exclusive in effort:
+Stage E (occupied / free / unknown fusion, where the acoustic-specific
+lambda_free sweep might change what evidence means), Stage G (a learned
+evidence weighting, which the plan puts after a working deterministic fusion —
+and there is now no working deterministic fusion to put it after), or accepting
+that the single-view predictor is the binding constraint and improving it
+instead. The result above says the paper's current claim cannot be made.
