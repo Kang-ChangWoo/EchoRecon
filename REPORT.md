@@ -603,7 +603,60 @@ commits 8a8007f (test) and 0ea8ea1 (val).
    spread at all, so removing them costs recall with nothing to replace it.
    [미확인] as a direct measurement.
 
+**Budget-matched control for (d), and the support-ranked curve (added after the first read; the control was not in CRITERIA.md and is reported as such).**
+contra1 keeps 57 / 38 / 34 % of the voxels at N = 4 / 16 / all. Keeping the
+*same number* of voxels by Stage A's support rank alone (`support_match1`)
+is better than the contradiction rule at every N and on both sets:
+
+| fixed ref, F1@0.2 (P / R) | N=4 | N=16 | N=all |
+|---|---|---|---|
+| r2 base (all voxels) | .525 (.446/.644) | .491 (.364/.765) | .475 (.345/.780) |
+| r2 contra1 | .528 (.515/.545) | .530 (.475/.603) | .526 (.464/.610) |
+| r2 support_match1 (same count) | .538 (.533/.546) | .566 (.533/.606) | .565 (.529/.612) |
+| r8 base | .566 | .529 | .515 |
+| r8 contra1 | .573 | .576 | .571 |
+| r8 support_match1 | .574 | .601 | .601 |
+
+contra1 − support_match1 at N=all: −0.039 (r2, paired sd .044, contra1 better in
+15 % of sequences), −0.030 (r8, 21 %). **(d) therefore fails the control**: its
+recovery is the recovery of "keep fewer voxels", and support counting does that
+better. The free-space contradiction carries no information beyond the support
+count on this data.
+
+The same point from the other side, with the fixed fraction that Stage A
+already used (support top 25 %, `frac 0.25`, seed 0):
+
+| support top 25 %, F1@0.2 | N=1 | N=2 | N=4 | N=8 | N=16 | all | drop16 [CI] | P N=4→all | R N=4→all |
+|---|---|---|---|---|---|---|---|---|---|
+| r2 subset ref (Stage A) | .544 | .584 | .611 | .592 | .574 | .562 | +.037 [+.025,+.049] | .685→.597 | .556→.538 |
+| r2 **fixed ref** | .306 | .430 | .513 | .544 | .561 | .562 | **−.048** [−.058,−.038] | .688→.597 | .412→.538 |
+| r8 subset ref | .580 | .612 | .636 | .621 | .601 | .590 | +.036 [+.024,+.048] | .726→.650 | .571→.546 |
+| r8 **fixed ref** | .329 | .448 | .533 | .570 | .587 | .590 | **−.054** [−.064,−.043] | .728→.650 | .423→.546 |
+
+Per scene (fixed, r2): apartment_2 −.025±.029, frl_apartment_5 −.066±.028,
+office_4 −.049±.032; by subset seed −.048 / −.050 / −.087. r8 the same sign
+everywhere. With a fixed reference and the support ranking that was already in
+the repository, **more views never hurt**: F1 rises to N=16 and is flat from 16
+to all (saturation), on every scene and every subset seed.
+
+**Revised reading.** The two curves differ only in which side of F1 is
+limiting. Precision falls with N by the same amount in both (all voxels
+.45→.35, top 25 % .69→.60) and recall rises in both (.64→.78, .41→.54). With all
+voxels precision is the smaller term, so F1 falls; with the top quarter recall
+is the smaller term, so F1 rises. The "falling curve" was therefore
+(i) the moving reference, worth ~0.02 at frac 1.0 and the *entire* fall at
+frac 0.25, plus (ii) an operating point where unsupported single-view voxels
+dominate. Neither (c) nor (d) is a distinct cause, (b) is the mechanism behind
+the precision decline (neighbouring views add correlated copies of the same
+wrong shell) but is not removable here, and (a) is pending. What remains real
+and unexplained is that **precision falls monotonically with N at every
+operating point**: each added view adds wrong voxels faster than right ones.
+The question for the paper changes from "why does it get worse" to "why does
+precision not improve with more evidence, and why does F1 saturate at 0.56 /
+0.59 with an oracle at 0.86".
+
 **Not done / [미확인].** (a) results; (c) and (d) re-measured on the
 short-window model (interaction); the direct confidence-asymmetry test; a
 mesh-derived reference (E80) — the fixed reference here is still the fused GT
-of the same trajectory.
+of the same trajectory; a pre-registered rule for the P/R operating point (the
+frac 0.25 reading above was the secondary number in CRITERIA.md, not the primary).

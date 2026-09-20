@@ -1,0 +1,65 @@
+=== r8  test sequences 39  frac 0.25  (val: yes)
+
+## base curve, seed 0, mean over sequences (F1@0.2 | precision | recall)
+subset  F1  N=  1:0.580 N=  2:0.612 N=  4:0.636 N=  8:0.621 N= 16:0.601 N= -1:0.590
+        P   N=  1:0.729 N=  2:0.737 N=  4:0.726 N=  8:0.696 N= 16:0.665 N= -1:0.650
+        R   N=  1:0.484 N=  2:0.528 N=  4:0.571 N=  8:0.566 N= 16:0.553 N= -1:0.546
+fixed   F1  N=  1:0.329 N=  2:0.448 N=  4:0.533 N=  8:0.570 N= 16:0.587 N= -1:0.590
+        P   N=  1:0.744 N=  2:0.743 N=  4:0.728 N=  8:0.698 N= 16:0.666 N= -1:0.650
+        R   N=  1:0.214 N=  2:0.324 N=  4:0.423 N=  8:0.485 N= 16:0.529 N= -1:0.546
+(e) n_ref(16)/n_ref(4) = 1.57   n_ref(all)/n_ref(4) = 1.71
+(e) base drop16 [subset] mean +0.036  sd over seq 0.039  per scene apartment_2:+0.076±0.041, frl_apartment_5:+0.015±0.025, office_4:+0.021±0.016 | dropAll +0.046
+(e) base drop16 [fixed] mean -0.054  sd over seq 0.035  per scene apartment_2:-0.026±0.033, frl_apartment_5:-0.068±0.030, office_4:-0.065±0.026 | dropAll -0.057
+(e) recovery = drop16(subset) - drop16(fixed) = +0.089  CI [+0.084, +0.095]  -> meaningful
+    drop16 [subset] by subset seed: +0.036 +0.027 +0.002
+    drop16 [fixed] by subset seed: -0.054 -0.059 -0.091
+
+## recovery per variant (drop16(base) - drop16(variant), same sequences); curve at N=4/8/16/all
+val-selected: smooth: smooth15 (val recovery +0.003), contra: contra1 (val recovery -0.014)
+       variant    ref  n  recovery16  ci_lo  ci_hi  recoveryAll  F1_4  F1_16  F1_all  dF1_16  dF1_all  flipped    verdict
+       compact subset 25       0.049  0.029  0.070          NaN 0.561  0.578     NaN  -0.037      NaN     True meaningful
+       compact  fixed 25       0.056  0.036  0.076          NaN 0.451  0.554     NaN  -0.039      NaN     True meaningful
+       contra0 subset 39      -0.032 -0.040 -0.025       -0.034 0.574  0.506   0.494  -0.095   -0.097    False      worse
+       contra0  fixed 39      -0.027 -0.035 -0.019       -0.027 0.464  0.490   0.494  -0.097   -0.097     True  no effect
+     contra1 * subset 39      -0.023 -0.033 -0.013       -0.024 0.586  0.527   0.516  -0.073   -0.075    False  no effect
+     contra1 *  fixed 39      -0.014 -0.025 -0.004       -0.011 0.470  0.509   0.516  -0.078   -0.075     True  no effect
+       contra2 subset 39      -0.028 -0.038 -0.018       -0.031 0.620  0.557   0.543  -0.044   -0.047    False  no effect
+       contra2  fixed 39      -0.025 -0.035 -0.014       -0.024 0.510  0.540   0.543  -0.048   -0.047     True  no effect
+    smooth15 * subset 39       0.001 -0.002  0.003        0.001 0.632  0.597   0.587  -0.004   -0.004    False  no effect
+    smooth15 *  fixed 39       0.002 -0.001  0.005        0.002 0.528  0.583   0.587  -0.004   -0.004     True  no effect
+       smooth5 subset 39       0.003  0.000  0.005        0.003 0.633  0.599   0.589  -0.001   -0.001    False  no effect
+       smooth5  fixed 39       0.004  0.001  0.007        0.004 0.528  0.586   0.589  -0.001   -0.001     True  no effect
+       smooth9 subset 39       0.001 -0.001  0.004        0.002 0.632  0.598   0.588  -0.003   -0.002    False  no effect
+       smooth9  fixed 39       0.003  0.000  0.005        0.004 0.528  0.584   0.588  -0.003   -0.002     True  no effect
+support_match0 subset 39      -0.061 -0.071 -0.051       -0.069 0.547  0.450   0.433  -0.150   -0.158    False      worse
+support_match0  fixed 39      -0.047 -0.058 -0.036       -0.049 0.425  0.432   0.433  -0.155   -0.158     True      worse
+support_match1 subset 39      -0.024 -0.033 -0.015       -0.025 0.562  0.503   0.491  -0.098   -0.099    False  no effect
+support_match1  fixed 39      -0.010 -0.020 -0.001       -0.006 0.441  0.484   0.491  -0.103   -0.099     True  no effect
+support_match2 subset 39      -0.029 -0.037 -0.020       -0.032 0.608  0.544   0.530  -0.057   -0.060    False  no effect
+support_match2  fixed 39      -0.023 -0.031 -0.014       -0.022 0.495  0.526   0.530  -0.061   -0.060     True  no effect
+
+## (b) spread (evenly spaced, seed 0) vs compact (consecutive) subsets, same N, F1@0.2
+[subset] N= 4: spread 0.636 (span 3.40 m) - compact 0.561 (span 0.45 m) = +0.075 CI [+0.059,+0.091] n=39
+[subset] N= 8: spread 0.621 (span 3.40 m) - compact 0.565 (span 1.05 m) = +0.056 CI [+0.043,+0.070] n=39
+[subset] N=16: spread 0.601 (span 3.40 m) - compact 0.578 (span 2.25 m) = +0.037 CI [+0.021,+0.054] n=25
+[fixed] N= 4: spread 0.533 (span 3.40 m) - compact 0.451 (span 0.45 m) = +0.082 CI [+0.064,+0.100] n=39
+[fixed] N= 8: spread 0.570 (span 3.40 m) - compact 0.509 (span 1.05 m) = +0.061 CI [+0.047,+0.075] n=39
+[fixed] N=16: spread 0.587 (span 3.40 m) - compact 0.554 (span 2.25 m) = +0.039 CI [+0.023,+0.058] n=25
+(b) precision@0.2 by viewing-angle spread tertile, within support bins (N=all, fixed ref):
+    s2-2       low-spread 0.271 (n 200820)  high-spread 0.360 (n 200820)  diff +0.089
+    s3-4       low-spread 0.390 (n 164897)  high-spread 0.496 (n 164897)  diff +0.106
+    s5-8       low-spread 0.582 (n 98370)  high-spread 0.664 (n 98370)  diff +0.082
+    s9-1000000 low-spread 0.746 (n 64700)  high-spread 0.741 (n 64700)  diff -0.005
+
+## (c) signed-error correlation (pooled Pearson r)
+    within view 1-2deg  : same-plane r 0.994 (raw 0.994, n 2333358), different-plane r 0.976 (raw 0.977), gap +0.018
+    within view 5-10deg : same-plane r 0.920 (raw 0.923, n 1737634), different-plane r 0.499 (raw 0.525), gap +0.421
+    within view 20-30deg: same-plane r 0.538 (raw 0.556, n 908104), different-plane r 0.120 (raw 0.165), gap +0.417
+    cross view baseline all     : r 0.625 (raw 0.637, n 2539584)
+    cross view baseline <0.5m   : r 0.917 (raw 0.920, n 429130)
+    cross view baseline 0.5-1.5m: r 0.791 (raw 0.796, n 811711)
+    cross view baseline >=1.5m  : r 0.420 (raw 0.437, n 1298743)
+
+## (d) contradicted vs uncontradicted voxels (N=all, fixed reference, wrong = >0.2 m from reference)
+    all voxels: contradicted 72.9%, wrong rate contradicted 0.687 vs uncontradicted 0.525, diff +0.161
+    multi-view voxels (s>=2): 53.1% of voxels, contradicted 73.4%, wrong rate contradicted 0.589 vs uncontradicted 0.373, diff +0.217

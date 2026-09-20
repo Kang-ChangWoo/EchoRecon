@@ -10,7 +10,7 @@
  "convention": "right0",
  "seeds": "3",
  "pairs_per_view": "3000",
- "workers": "24",
+ "workers": "20",
  "seq_limit": "0",
  "tag": "",
  "out": "/root/storage/implementation/shared_audio/EchoRecon/results/E100_cause"

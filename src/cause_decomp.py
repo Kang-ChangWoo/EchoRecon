@@ -311,6 +311,12 @@ def one_sequence(job):
                         continue
                     for rn in refs:
                         score(f"contra{k_}", pos[keep], cnt[keep], rn, {"kept_frac_vox": float(keep.mean())})
+                    # budget-matched control: the same number of voxels kept by support rank
+                    # alone (Stage A's ranking), so the contradiction rule is read against
+                    # "keep the well-supported voxels" and not against "keep fewer voxels"
+                    top = np.argsort(-cnt, kind="stable")[: int(keep.sum())]
+                    for rn in refs:
+                        score(f"support_match{k_}", pos[top], cnt[top], rn, {"kept_frac_vox": float(keep.mean())})
                 if N <= 0 and seed == 0:
                     # existence measurements at N = all, fixed reference
                     err, _ = cKDTree(ref_fixed).query(pos, k=1, workers=1)
