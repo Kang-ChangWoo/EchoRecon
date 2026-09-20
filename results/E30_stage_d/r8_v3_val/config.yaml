@@ -1,0 +1,22 @@
+{
+ "run": "posterior_r8",
+ "mode": "r8",
+ "ckpt": "best",
+ "split": "val",
+ "scenes": "None",
+ "gpu": "1",
+ "voxel": "0.1",
+ "stride": "2",
+ "tau_band": "0.15",
+ "max_depth": "10.0",
+ "max_cand": "800000.0",
+ "convention": "right0",
+ "seq_limit": "0",
+ "temperature": "0.0",
+ "tag": "_v3",
+ "band": "interp",
+ "hop": "160",
+ "rays_per_step": "20000",
+ "out": "/root/storage/implementation/shared_audio/EchoRecon/results/E30_stage_d",
+ "temperature_used": 1.3017635345458984
+}
