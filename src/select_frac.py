@@ -19,7 +19,8 @@ from pathlib import Path
 
 import pandas as pd
 
-METHODS = ("A_point", "B_argmax", "C_on_B", "C_grid", "D_conf_sum", "E_conf_filter50", "E_conf_filter75", "oracle")
+METHODS = ("A_point", "B_argmax", "C_on_B", "C_grid", "D_conf_sum", "E_conf_filter50", "B_argmax_matchE50",
+           "E_conf_filter75", "B_argmax_matchE75", "oracle")
 
 
 def main() -> int:

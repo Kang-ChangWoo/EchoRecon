@@ -68,9 +68,10 @@ class ViewPosterior:
     """
 
     def __init__(self, cdf: np.ndarray, origin, rotation, H: int, W: int, edges: np.ndarray,
-                 space: str = "radial"):
-        assert space in ("radial", "face")
+                 space: str = "radial", rounding: str = "interp"):
+        assert space in ("radial", "face") and rounding in ("interp", "whole")
         self.cdf = cdf; self.H = H; self.W = W; self.edges = edges; self.space = space
+        self.rounding = rounding    # "whole": count only bins wholly inside the band (the old behaviour)
         self.origin = np.asarray(origin, float)
         self.R = quat_to_R(rotation) if np.asarray(rotation).size == 4 else np.asarray(rotation)
         self.fc = face_cos(ray_dirs(H, W)).reshape(-1) if space == "face" else None
@@ -99,7 +100,12 @@ class ViewPosterior:
             # 3.9 bins in face space and to one bin or less on 6 % of rays.
             u_lo = np.clip((r_lo - lo_e) / step, 0.0, float(K))
             u_hi = np.clip((r_hi - lo_e) / step, 0.0, float(K))
-            out[s:s + chunk] = self._cdf_at(flat, u_hi) - self._cdf_at(flat, u_lo)
+            if self.rounding == "whole":
+                lo = np.ceil(u_lo).astype(np.int64); hi = np.floor(u_hi).astype(np.int64)
+                m = self.cdf[flat, hi] - self.cdf[flat, lo]
+                out[s:s + chunk] = np.where(hi > lo, m, 0.0)
+            else:
+                out[s:s + chunk] = self._cdf_at(flat, u_hi) - self._cdf_at(flat, u_lo)
         return out
 
     def _cdf_at(self, flat: np.ndarray, u: np.ndarray) -> np.ndarray:

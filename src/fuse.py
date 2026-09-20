@@ -12,6 +12,8 @@ from scipy.spatial import cKDTree
 
 def voxel_downsample(P: np.ndarray, size: float, W: np.ndarray | None = None):
     """Mean point per occupied voxel (weighted if W given). Returns points, weights per voxel."""
+    if len(P) == 0:
+        return np.zeros((0, 3), np.float64), np.zeros(0, np.float64)
     if W is None:
         W = np.ones(len(P))
     key = np.floor(P / size).astype(np.int64)
@@ -21,6 +23,17 @@ def voxel_downsample(P: np.ndarray, size: float, W: np.ndarray | None = None):
     sw = np.bincount(inv, weights=W, minlength=n)
     out = np.stack([np.bincount(inv, weights=W * P[:, k], minlength=n) / np.maximum(sw, 1e-12) for k in range(3)], 1)
     return out, sw
+
+
+def voxel_sums(P: np.ndarray, size: float, W: np.ndarray) -> np.ndarray:
+    """Sum of W per occupied voxel, in the same voxel order as voxel_downsample(P, size),
+    so a weighted ranking can be attached to the *unweighted* voxel centroids."""
+    if len(P) == 0:
+        return np.zeros(0, np.float64)
+    key = np.floor(P / size).astype(np.int64)
+    _, inv = np.unique(key, axis=0, return_inverse=True)
+    inv = inv.ravel()
+    return np.bincount(inv, weights=W, minlength=inv.max() + 1)
 
 
 # ---------------------------------------------------------------- per-ray weights
