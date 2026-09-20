@@ -94,10 +94,17 @@ def one_sequence(args):
             cand = candidate_grid(lo, hi, a["voxel"])
         for sigma in SIGMAS:
             views = [view_from_prediction(P[j], S.pose(steps[j]), edges, sigma, a["convention"]) for j in idx]
+            # (a) over the whole room grid: the posterior may support voxels no argmax hit
             A = fuse(views, cand, tau=a["tau_band"])
             o2 = np.argsort(-A)
             for fr in FRACS:
                 add("fake_posterior", sigma, cand, o2[: max(1, int(fr * len(cand)))], len(cand))
+            # (b) on exactly the voxels the support ranking sees, so soft against hard
+            # evidence is compared without the candidate set differing
+            Av = fuse(views, vox, tau=a["tau_band"])
+            o3 = np.argsort(-Av)
+            for fr in FRACS:
+                add("fake_posterior_same_cand", sigma, vox, o3[: max(1, int(fr * len(vox)))], len(vox))
     return rows
 
 
