@@ -349,3 +349,39 @@ evidence weighting, which the plan puts after a working deterministic fusion —
 and there is now no working deterministic fusion to put it after), or accepting
 that the single-view predictor is the binding constraint and improving it
 instead. The result above says the paper's current claim cannot be made.
+
+### Stage D on the eight-observation model (posterior_r8)
+
+Same script, same 39 sequences, the `r8` point predictions and the `posterior_r8`
+head (best epoch 2, val KL 1.190; temperature fitted on val 1.343, not applied
+here — see the note below). Ray level first (E21, 133.7 M test rays): argmax
+MAE 0.209 m against 0.246 m for r2, 23.7 % of argmaxes wrong by more than 0.2 m,
+mode rescue@10 7.1 %, 1.19 modes per ray, mass at the truth when the argmax is
+wrong 16.3 %, fake Gaussian rescue 0 % at every sigma. More microphones sharpen
+the argmax and do not add a second mode.
+
+| method | N=1 | 2 | 4 | 8 | 16 | all |
+|---|---|---|---|---|---|---|
+| A point | 0.614 | 0.642 | **0.651** | 0.631 | 0.603 | 0.590 |
+| B argmax | 0.604 | 0.630 | 0.636 | 0.614 | 0.588 | 0.574 |
+| C posterior, on B's voxels | 0.579 | 0.615 | 0.627 | 0.599 | 0.569 | 0.554 |
+| C posterior, room grid | 0.601 | 0.629 | 0.622 | 0.589 | 0.560 | 0.546 |
+| oracle | 0.745 | 0.792 | 0.837 | 0.855 | 0.855 | 0.848 |
+
+The ordering is the same as for r2 at every view count: point ≥ argmax >
+posterior, all three peaking at N=4 and falling after, the oracle rising to
+0.855. Two differences from r2. The single-view advantage of grid posterior
+fusion is gone (0.601 against 0.614; for r2 it was 0.595 against 0.572). And
+the posterior's argmax is now slightly *worse* than the point model at N=1
+(0.010 F1), so E31 holds less exactly than for r2; the B-versus-C comparison,
+which is within one network, is unaffected. With both observation sets the
+conclusion of the section above stands.
+
+**Two things Stage D did not do, to be corrected before any further use.**
+The band mass was computed from the raw softmax (temperature 1), whereas Stage
+C's calibration numbers used the val-fitted temperature (1.462 for r2, 1.343 for
+r8). A temperature above 1 broadens every ray's distribution, so the fused
+evidence would be smoother still; the direction of the effect on the ranking is
+not obvious and has to be measured. And the room grid's bounding box was taken
+from the reference and B's voxels together; the reference is ground truth and
+should not set even the box. Both are fixed in the next run.

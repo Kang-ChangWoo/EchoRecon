@@ -4,9 +4,12 @@ The base model (imported from the sibling checkout, never copied here) ends in a
 decoder whose last layer is a 1-channel convolution producing depth / max_depth
 in [0, 1]. This wraps that model and replaces only the last layer with a
 K-channel one, so the backbone, the attention stack and the decoder are exactly
-the base model's and can be initialised from its checkpoint. The point head is
-kept alongside, so the same network can report both and the comparison in
-Stage D is within one backbone.
+the base model's and are initialised from its checkpoint. The new head itself is
+not warm-started in any meaningful sense (see __init__): its K filters all begin
+as the same scaled copy of the point filter, which makes the initial
+distribution uniform along every ray and is equivalent to a constant
+initialisation. The comparison in Stage D is within one backbone because the
+backbone weights, not the head, are shared.
 
 Bins are linear in metric depth over [d_min, d_max]; an active echo's time of
 flight is linear in range.
@@ -60,8 +63,12 @@ class PosteriorDepth(nn.Module):
         old = base.head
         new = nn.Conv2d(old.in_channels, K, old.kernel_size, old.stride, old.padding)
         if init_from_point_head:
-            # every bin starts from the point head's filter, so the initial
-            # distribution is flat but already driven by the same features
+            # Every bin gets the same filter, so the logits are identical across
+            # bins and the softmax is uniform on every ray. That is a flat start,
+            # not a warm start: it carries no information about which bin the
+            # point head would have chosen, and is equivalent to zero
+            # initialisation plus a per-ray constant. Kept for reproducibility of
+            # the trained runs; do not describe it as "initialised from the point head".
             with torch.no_grad():
                 new.weight.copy_(old.weight.repeat(K, 1, 1, 1) * 0.1)
                 new.bias.zero_()
