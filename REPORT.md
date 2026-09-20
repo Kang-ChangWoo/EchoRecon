@@ -398,6 +398,21 @@ should not set even the box. Both are fixed in the next run.
 
 ## Stage D, second run (v2): after the audit fixes, plus per-view confidence before fusion
 
+> **Provenance note (2026-09-20, session 2).** The v2 directories
+> (`results/E30_stage_d/{r2,r8}_v2`, `*_v2_val`) record commit a57f2cd but were
+> produced with band interpolation still uncommitted, so their numbers cannot be
+> tied to a revision. They are superseded by **v3** (`{r2,r8}_v3`, `*_v3_val`,
+> `r2_v3_whole`, code b5611cd, pre-registered rules in
+> `results/E30_stage_d/CRITERIA.md`). v3 F1@0.2 at N=1/4/all, test, kept fraction
+> chosen on val: r2 A_point 0.572/0.610/0.562, B_argmax 0.576/0.609/0.556,
+> C_on_B 0.574/0.605/0.520, C_grid 0.587/0.594/0.512, D_conf_sum
+> 0.589/0.617/0.549, E_conf_filter50 0.424/0.473/0.400; r8 A_point
+> 0.614/0.651/0.590, C_grid 0.612/0.613/0.534, D_conf_sum 0.613/0.642/0.573.
+> The shape is unchanged from v2: every method falls from N=4 on. The
+> project's centre then moved to the cause decomposition below (E100), and the
+> retrained heads planned in HANDOFF.md were not run.
+
+
 **Why.** A read-only audit (2026-09-20) of Stages A-D found three things that all
 leaned against the posterior: band mass counted only bins wholly inside the
 band (at K=128 and tau=0.15 the band shrank to about 2.3 of its 3.9 nominal
@@ -514,3 +529,81 @@ and is the ceiling for A/B/C_on_B/D/E, not for C_grid. The posterior head's
 "initialisation from the point head" is a uniform start, not a warm start
 (`src/posterior_head.py`). The earlier Stage D tables (`results/E30_stage_d/{r2,r8}`)
 are the T=1, whole-bin version and are kept for the record.
+
+## E100: why does the curve fall? — cause decomposition (session 2, 2026-09-20)
+
+**Why.** Everything before this section prescribed a remedy (robust fusion,
+posterior fusion, confidence weighting) without knowing the cause of the fall
+from N=4 on. Five candidate causes were separated with the rules in
+`results/E100_cause/CRITERIA.md` (committed 69102f2 before any run):
+(e) the reference grows with N, (a) front-end time resolution, (b) no angular
+diversity, (c) ray independence assumed, (d) no correspondence check. The
+pipeline under study is the plain A_point fusion (every voxel, no ranking), so
+that the support ranking does not enter as a sixth cause.
+
+**What was done.** `src/cause_decomp.py` (d4589d4) unprojects every step once
+and scores, per (N, subset seed, variant, reference): the base pipeline; the
+same predictions against a fixed reference (GT of all steps) and against the
+old N-dependent one; consecutive instead of spread subsets; per-view median
+smoothing (5/9/15 px); and free-space contradiction filtering (drop a voxel if
+c >= k*s, c = other views whose rays passed through it with 0.2 m margin, s =
+views that put a point in it, k in {0, 1, 2}). Hyper-parameters were chosen on
+the val scenes (`r2_val`, `r8_val`: contra1 and smooth15 for both sets) and
+every number below is test. Numbers: `results/E100_cause/{r2,r8}/table.txt`,
+commits 8a8007f (test) and 0ea8ea1 (val).
+
+**Result — base curve under both references (F1@0.2 | precision | recall, seed 0, 39 test sequences).**
+
+| | r2 subset ref | r2 fixed ref | r8 subset ref | r8 fixed ref |
+|---|---|---|---|---|
+| F1 N=1/4/16/all | .523/.549/.493/.475 | .434/.525/.491/.475 | .564/.592/.532/.515 | .468/.566/.529/.515 |
+| precision N=1→all | .474→.345 | .510→.345 | .515→.390 | .550→.390 |
+| recall N=1→all | .588→.780 | .383→.780 | .632→.772 | .413→.772 |
+| drop16 = F1(4)−F1(16) | +.056 (sd .033) | **+.034** (sd .026) | +.060 | **+.037** |
+| dropAll = F1(4)−F1(all) | +.073 | +.049 | +.077 | +.051 |
+| per scene drop16 (fixed) | | apt2 +.051, frl5 +.018, off4 +.036 | | apt2 +.059, frl5 +.018, off4 +.038 |
+| drop16 by subset seed (fixed) | | .034 / .034 / .004 | | .037 / .030 / .014 |
+
+**Contribution table** (② recovery = drop16(base) − drop16(cause removed), fixed reference, paired over the 39 test sequences, 95 % bootstrap CI; band 0.03).
+
+| cause | ① evidence that it is real | ② recovery, r2 / r8 | verdict | ③ cost |
+|---|---|---|---|---|
+| (e) reference grows with N | n_ref(16)/n_ref(4) = 1.57, n_ref(all)/n_ref(4) = 1.71 | +0.022 [.018,.026] / +0.023 [.020,.027] | real but **below the band**; the fall survives the fix (drop16 .034/.037, precision .51→.35) | none |
+| (a) STFT window 8.33 ms | [미확인] retrains running (w128, w64, w400 at hop 32) | [미확인] | | 3 retrains, 3–6 h |
+| (b) no angular diversity | same N, spread − consecutive subset: N=4 +.060 / +.064, N=8 +.043 / +.036, N=16 +.024 / +.016 (CIs exclude 0); voxel precision, high vs low viewing-angle spread tertile at matched support: +.10/+.13/+.10 for s = 2 / 3–4 / 5–8, **0.00 for s ≥ 9** | not removable on these trajectories at N=16; r2→r8 (per-observation heading diversity) drop16 .034→.037 = no effect | real, not removable here | none |
+| (c) ray independence | within one view, same-plane ray pairs 5–10° apart: r = .93 / .92 (different plane .58 / .50); 20–30°: .58 / .54 vs .21 / .12. Across views at the same GT voxel: baseline <0.5 m r = .88 / .92, 0.5–1.5 m .73 / .79, ≥1.5 m .41 / .42 | plane smoothing (val-chosen 15 px): +0.003 / +0.003; single-view F1 −0.005 | real; **the smoothing control does nothing** because the prediction is already smooth | none |
+| (d) no correspondence check | 73–75 % of fused voxels are traversed by another view's ray; wrong rate (>0.2 m) contradicted .72 vs uncontradicted .57 (+.15 / +.16); among multi-view voxels .62 vs .39 (+.23 / +.22) | **contra1: +0.036 [.028,.044] / +0.039 [.031,.047]**; F1 at N=all +0.051 / +0.056; curve flipped under the fixed reference (r2 F1 4/16/all = .528/.530/.526; r8 .573/.576/.571). Under the subset reference recovery +.033 / +.034, not flipped | **meaningful on both sets and both references** | none (geometry only) |
+
+**Reading.**
+1. (e) is a real confound worth about 0.02 of the old 0.056 drop, and it must
+   be fixed in every later table (the fixed reference is used from here on).
+   It is not the cause: with predictions untouched and the reference frozen,
+   precision still falls monotonically from N=1 to N=all, i.e. every added
+   view contributes more wrong points than right ones while recall saturates
+   near 0.78. The F1 fall that remains (0.034–0.037) sits at the edge of the
+   tie band and is scene- and subset-dependent (frl_apartment_5 +0.018 within
+   its sd 0.025; random subset seed 2: +0.004). The claim "more views hurt" is
+   therefore weak in F1 and strong in precision.
+2. (d) is the only cause whose removal clears the pre-registered bar, on r2
+   and r8, under both references, with CIs well clear of 0. The cheapest rule
+   (k = 0, drop on a single contradiction) is too aggressive (+0.013); the
+   val-chosen k = 1 (contradictions at least as many as supporting views)
+   both lifts N=all by 0.05 and removes the fall.
+3. (c) and (b) are real but are the same mechanism seen twice: neighbouring
+   views (0.15–0.5 m apart) share their errors (r ≈ 0.9), so adding them adds
+   copies of the same wrong shell (b: compact subsets are worse; c: the
+   correlation decays with baseline). Neither is a lever on this data: the
+   trajectories cannot be spread further at N=16, and smoothing a
+   prediction that is already smooth changes nothing. (a) is the remaining
+   candidate for *why* the shell is wrong in the first place.
+4. The confidence asymmetry noted in Stage D (good ranking, no fusion gain,
+   collapse when low-confidence rays are removed) is consistent with (b):
+   voxels with high viewing-angle spread are more precise only up to s = 8;
+   the far/oblique regions that low-confidence rays alone cover have no
+   spread at all, so removing them costs recall with nothing to replace it.
+   [미확인] as a direct measurement.
+
+**Not done / [미확인].** (a) results; (c) and (d) re-measured on the
+short-window model (interaction); the direct confidence-asymmetry test; a
+mesh-derived reference (E80) — the fixed reference here is still the fused GT
+of the same trajectory.
