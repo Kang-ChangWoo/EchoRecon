@@ -687,9 +687,12 @@ pass (`results/E100_cause/r2_w128_h32/`, `r2_w64_h32/`, with `_val`).
 0.23 m of nominal depth resolution) leaves the single-view error, the fall,
 the precision decline and every (b)(c)(d) measurement where they were. No
 interaction: (c) and (d) measured on the short-window model are within 0.03 of
-the released model. The w400/h32 control (hop alone) is [미확인] until its run
-finishes; it can only separate hop from window, and both short windows already
-match the released curve, so it cannot change the verdict.
+the released model. The w400/h32 control (hop alone, `results/E100_cause/r2_w400_h32/`)
+came out identical to the released model: test ERP MAE 0.293 (paired −0.003),
+all-voxel fixed-reference F1 N=1/4/16/all .425/.529/.493/.478 with drop16
++0.036, top-25 % drop16 −0.050, same-plane r .927, cross-view r .860 / .387,
+contradiction gap +.150. Hop 160 → 32 alone changes nothing either, so the
+three retrains are a clean null for the front-end.
 
 **Not done / [미확인].** the w400/h32 hop control; an r8 short-window retrain; the direct confidence-asymmetry test; a
 mesh-derived reference (E80) — the fixed reference here is still the fused GT
