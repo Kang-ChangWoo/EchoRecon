@@ -1,0 +1,17 @@
+{
+ "mode": "r2",
+ "pred_dir": "outputs/pred/r2_w128_h32",
+ "split": "val",
+ "scenes": "None",
+ "voxel": "0.1",
+ "stride": "2",
+ "max_depth": "10.0",
+ "margin": "0.2",
+ "convention": "right0",
+ "seeds": "3",
+ "pairs_per_view": "3000",
+ "workers": "24",
+ "seq_limit": "0",
+ "tag": "_w128_h32",
+ "out": "/root/storage/implementation/shared_audio/EchoRecon/results/E100_cause"
+}

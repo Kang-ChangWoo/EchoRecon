@@ -655,8 +655,43 @@ The question for the paper changes from "why does it get worse" to "why does
 precision not improve with more evidence, and why does F1 saturate at 0.56 /
 0.59 with an oracle at 0.86".
 
-**Not done / [미확인].** (a) results; (c) and (d) re-measured on the
-short-window model (interaction); the direct confidence-asymmetry test; a
+**(a) front-end time resolution — result (added when the retrains finished).**
+Three retrains of the base r2 recipe with `STFT_WIN` 128 / 64 / 400 at hop 32
+(hop ≤ win/2 must hold at win 64; the released model is win 400 / hop 160).
+40 epochs, bs 12 × accum 2 (= the released effective batch 24), lr 5e-4, seed 0,
+n_fft 512 zero-padded so the frequency bins are unchanged. Checkpoints
+`outputs/base_retrain/oaa_r2_w{128,64,400}_h32/` (val MAE best 0.315 at
+epoch 27 / 0.321 at epoch 35; released 0.333). *A first prediction pass was
+invalid*: the base trainer does not record the window/hop in the checkpoint, so
+`predict_all.py` ran the retrained weights at the released 400/160 front-end
+(ERP MAE 0.86 m); the args are now written into the checkpoints by
+`src/e100_after_train.sh` and the pass was redone. Numbers below are the redone
+pass (`results/E100_cause/r2_w128_h32/`, `r2_w64_h32/`, with `_val`).
+
+| r2, test, 39 seqs | released w400/h160 | w128/h32 | w64/h32 |
+|---|---|---|---|
+| single-view ERP MAE (m) | 0.296 | 0.292 (paired −0.003, sd .028, 62 % seqs better) | 0.289 (−0.007, 59 %) |
+| all voxels, fixed ref: F1 N=1/4/16/all | .434/.525/.491/.475 | .431/.532/.491/.474 | .441/.534/.502/.486 |
+| precision N=1→all | .510→.345 | .505→.342 | .513→.350 |
+| drop16 (fixed) | +.034 | +.041 | +.032 |
+| recovery(a) = drop16(released) − drop16(short) | | −0.007 | +0.002 |
+| support top 25 %, fixed ref: F1 N=1/4/16/all | .306/.513/.561/.562 | .317/.525/.573/.573 (drop16 −.048) | .310/.520/.574/.575 (drop16 −.053) |
+| (c) same-plane r, 5–10° | .930 | .929 | .921 |
+| (c) cross-view r, baseline <0.5 m / ≥1.5 m | .880 / .407 | .852 / .361 | .833 / .406 |
+| (d) wrong-rate gap, contradicted − not (all / multi-view) | +.150 / +.229 | +.133 / +.221 | +.118 / +.204 |
+| contra1 recovery / support_match1 recovery (fixed) | +.036 / +.062 | +.035 / +.070 | +.036 / +.061 |
+
+(a) is **not real** by the pre-registered test (single-view MAE improves by
+0.003–0.007 m against a 0.02 m bar) and has **no effect** on the curve
+(recovery −0.007 / +0.002). Halving or sixth-ing the window (1.43 m → 0.46 m →
+0.23 m of nominal depth resolution) leaves the single-view error, the fall,
+the precision decline and every (b)(c)(d) measurement where they were. No
+interaction: (c) and (d) measured on the short-window model are within 0.03 of
+the released model. The w400/h32 control (hop alone) is [미확인] until its run
+finishes; it can only separate hop from window, and both short windows already
+match the released curve, so it cannot change the verdict.
+
+**Not done / [미확인].** the w400/h32 hop control; an r8 short-window retrain; the direct confidence-asymmetry test; a
 mesh-derived reference (E80) — the fixed reference here is still the fused GT
 of the same trajectory; a pre-registered rule for the P/R operating point (the
 frac 0.25 reading above was the secondary number in CRITERIA.md, not the primary).
