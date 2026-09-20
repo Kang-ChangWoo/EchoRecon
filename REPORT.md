@@ -695,3 +695,45 @@ match the released curve, so it cannot change the verdict.
 mesh-derived reference (E80) — the fixed reference here is still the fused GT
 of the same trajectory; a pre-registered rule for the P/R operating point (the
 frac 0.25 reading above was the secondary number in CRITERIA.md, not the primary).
+
+## E101: how does one more view lower precision? (marginal-view analysis)
+
+**Why.** E100 left one real, unexplained fact: precision falls monotonically
+with N at every operating point. E101 measures what an added view contributes,
+one view at a time, on the released r2 / r8 predictions with the fixed
+reference. Criteria pre-registered in `results/E100_cause/CRITERIA_E101.md`
+(0b6e7f4). Code `src/marginal_view.py`; numbers
+`results/E101_marginal_view/{r2,r8}/summary.txt`, 39 test sequences.
+
+Views are added in farthest-point ("spread"), random, and sequential order.
+For the k-th view: the precision of the voxels it creates that no earlier
+view occupied ("new voxels"), the fraction of its points that land in voxels
+already occupied, the precision of those overlapping points vs its new points,
+its distance to the nearest included view, and the error class of its wrong
+new voxels.
+
+| | r2 spread | r2 random | r8 spread | r8 random | verdict |
+|---|---|---|---|---|---|
+| H1 Spearman(distance to nearest included view, new-voxel precision), n 884 | +0.40 | +0.30 | +0.37 | +0.26 | yes (spread), borderline (random r8) |
+| H1 new-voxel precision, view added <0.5 m vs ≥1.5 m from the set | .26 vs .43 | .28 vs .44 | .29 vs .48 | .31 vs .48 | yes, gap .17–.19 on every scene (apt2 .18/.39, frl5 .29/.44, off4 .32/.51 for r2) |
+| H2 wrong new voxels: near miss .2–.5 m / displaced .5–1 m / hallucinated >1 m | 39 / 30 / 31 % | same | 41 / 28 / 31 % | same | **neither** blur (≥60 % near) nor hallucination (≥40 % far): three classes of equal size |
+| H3 precision of overlapping vs new points, k = 2 / 4 / 8 / 16 / 24 | .85/.69, .79/.47, .76/.44, .74/.29, .69/.22 | | .82/.71, .81/.53, .77/.45, .76/.35, .69/.35 | | yes in spread order (min gap +.14 / +.11); fails at one k in random / sequential order |
+| overlap fraction at k = 2 / 8 / 24 (spread) | .11 / .78 / .92 | | .14 / .83 / .93 | | after 8 views, > 3/4 of every new view's points fall where someone already looked |
+
+**Reading.** An added view is useful where it agrees with someone (its
+overlapping points are .7–.85 precise) and harmful where it is alone (its new
+voxels are .2–.5 precise, worse the closer it stands to a view already in the
+set and worse the later it arrives, since what is still "new" after eight
+views is the far, oblique and hallucinated part). The precision decline with N
+is therefore the accumulation of every view's *unsupported* remainder, and
+neighbouring views contribute the least precise remainder. The wrong remainder
+is one third near misses, one third displaced by 0.5–1 m, one third
+hallucinated beyond 1 m, so neither "sharpen the depth" nor "remove
+hallucinations" alone can remove more than about a third of it. The
+remedy family this selects is *baseline-aware support*: count agreement only
+between views far enough apart to be independent (E100 (c): r 0.9 below
+0.5 m, 0.4 above 1.5 m), which is one knob and no training.
+
+**[미확인].** Val split not run (no hyper-parameter); the same analysis on the
+short-window models; whether the hallucinated third is stable across scenes
+(per-scene split of H2 not printed).
