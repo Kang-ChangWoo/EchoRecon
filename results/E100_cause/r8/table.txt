@@ -1,4 +1,4 @@
-=== r8  test sequences 39  frac 1.0  (val: none)
+=== r8  test sequences 39  frac 1.0  (val: yes)
 
 ## base curve, seed 0, mean over sequences (F1@0.2 | precision | recall)
 subset  F1  N=  1:0.564 N=  2:0.591 N=  4:0.592 N=  8:0.564 N= 16:0.532 N= -1:0.515
@@ -15,21 +15,22 @@ fixed   F1  N=  1:0.468 N=  2:0.538 N=  4:0.566 N=  8:0.553 N= 16:0.529 N= -1:0.
     drop16 [fixed] by subset seed: +0.037 +0.030 +0.014
 
 ## recovery per variant (drop16(base) - drop16(variant), same sequences); curve at N=4/8/16/all
- variant    ref  n  recovery16  ci_lo  ci_hi  recoveryAll  F1_4  F1_16  F1_all  dF1_16  dF1_all  flipped    verdict
- compact subset 25       0.053  0.036  0.069          NaN 0.526  0.508     NaN  -0.020      NaN    False meaningful
- compact  fixed 25       0.056  0.039  0.072          NaN 0.501  0.508     NaN  -0.016      NaN     True meaningful
- contra0 subset 39       0.011  0.002  0.021        0.015 0.592  0.543   0.530   0.012    0.015    False  no effect
- contra0  fixed 39       0.015  0.005  0.024        0.020 0.561  0.539   0.530   0.010    0.015    False  no effect
- contra1 subset 39       0.034  0.026  0.042        0.041 0.607  0.581   0.571   0.049    0.056    False meaningful
- contra1  fixed 39       0.039  0.031  0.047        0.048 0.573  0.576   0.571   0.047    0.056     True meaningful
- contra2 subset 39       0.030  0.022  0.037        0.037 0.606  0.575   0.565   0.044    0.051    False  no effect
- contra2  fixed 39       0.031  0.023  0.039        0.040 0.576  0.571   0.565   0.042    0.051    False meaningful
-smooth15 subset 39       0.003  0.001  0.004        0.003 0.583  0.526   0.509  -0.006   -0.005    False  no effect
-smooth15  fixed 39       0.003  0.002  0.004        0.004 0.556  0.523   0.509  -0.006   -0.005    False  no effect
- smooth5 subset 39       0.002  0.001  0.003        0.002 0.587  0.529   0.512  -0.003   -0.003    False  no effect
- smooth5  fixed 39       0.002  0.002  0.003        0.003 0.560  0.526   0.512  -0.003   -0.003    False  no effect
- smooth9 subset 39       0.002  0.001  0.003        0.003 0.585  0.527   0.511  -0.004   -0.004    False  no effect
- smooth9  fixed 39       0.003  0.002  0.004        0.003 0.559  0.525   0.511  -0.004   -0.004    False  no effect
+val-selected: smooth: smooth15 (val recovery +0.004), contra: contra1 (val recovery +0.039)
+   variant    ref  n  recovery16  ci_lo  ci_hi  recoveryAll  F1_4  F1_16  F1_all  dF1_16  dF1_all  flipped    verdict
+   compact subset 25       0.053  0.036  0.069          NaN 0.526  0.508     NaN  -0.020      NaN    False meaningful
+   compact  fixed 25       0.056  0.039  0.072          NaN 0.501  0.508     NaN  -0.016      NaN     True meaningful
+   contra0 subset 39       0.011  0.002  0.021        0.015 0.592  0.543   0.530   0.012    0.015    False  no effect
+   contra0  fixed 39       0.015  0.005  0.024        0.020 0.561  0.539   0.530   0.010    0.015    False  no effect
+ contra1 * subset 39       0.034  0.026  0.042        0.041 0.607  0.581   0.571   0.049    0.056    False meaningful
+ contra1 *  fixed 39       0.039  0.031  0.047        0.048 0.573  0.576   0.571   0.047    0.056     True meaningful
+   contra2 subset 39       0.030  0.022  0.037        0.037 0.606  0.575   0.565   0.044    0.051    False  no effect
+   contra2  fixed 39       0.031  0.023  0.039        0.040 0.576  0.571   0.565   0.042    0.051    False meaningful
+smooth15 * subset 39       0.003  0.001  0.004        0.003 0.583  0.526   0.509  -0.006   -0.005    False  no effect
+smooth15 *  fixed 39       0.003  0.002  0.004        0.004 0.556  0.523   0.509  -0.006   -0.005    False  no effect
+   smooth5 subset 39       0.002  0.001  0.003        0.002 0.587  0.529   0.512  -0.003   -0.003    False  no effect
+   smooth5  fixed 39       0.002  0.002  0.003        0.003 0.560  0.526   0.512  -0.003   -0.003    False  no effect
+   smooth9 subset 39       0.002  0.001  0.003        0.003 0.585  0.527   0.511  -0.004   -0.004    False  no effect
+   smooth9  fixed 39       0.003  0.002  0.004        0.003 0.559  0.525   0.511  -0.004   -0.004    False  no effect
 
 ## (b) spread (evenly spaced, seed 0) vs compact (consecutive) subsets, same N, F1@0.2
 [subset] N= 4: spread 0.592 (span 3.40 m) - compact 0.526 (span 0.45 m) = +0.066 CI [+0.050,+0.082] n=39
