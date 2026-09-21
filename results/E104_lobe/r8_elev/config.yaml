@@ -1,0 +1,14 @@
+{
+ "mode": "r8",
+ "pred_dir": "/root/storage/implementation/shared_audio/EchoRecon/outputs/pred/r8",
+ "split": "test",
+ "voxel": "0.1",
+ "stride": "2",
+ "max_depth": "10.0",
+ "convention": "right0",
+ "seeds": "1",
+ "workers": "14",
+ "tag": "_elev",
+ "elev_weights": "results/E104_lobe/r8_val.json",
+ "out": "results/E104_lobe"
+}

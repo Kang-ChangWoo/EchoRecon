@@ -885,3 +885,44 @@ pre-registered and is read as descriptive.
 
 [미확인]: the elevation curve after the ERP solid-angle correction (the
 catalogue's confound); the per-scene split.
+
+## E105: the depth distribution under the fixed reference — no
+
+**Why.** Stage D's verdict on posterior fusion was reached under the moving
+reference. E105 is Stage D v3 re-run with `--ref fixed` (GT of every step),
+everything else identical (band interp, val-fitted T 1.378 / 1.302, one box,
+kept fraction chosen on `*_v3fixed_val`). Pre-registered rule: the secondary
+verdict of `results/E30_stage_d/CRITERIA.md` with the fixed reference.
+`results/E30_stage_d/{r2,r8}_v3fixed/` (+ `_val`), `compare.txt`, commit of the
+code 5fa1e22.
+
+| F1@0.2, test, val-selected fraction | N=1 | 2 | 4 | 8 | 16 | all | slope = all − 4 |
+|---|---|---|---|---|---|---|---|
+| r2 A_point | .434 | .498 | .551 | .564 | .561 | .562 | +.011 |
+| r2 B_argmax | .435 | .503 | .551 | .558 | .559 | .556 | +.005 |
+| r2 C_on_B | .435 | .503 | .526 | .531 | .527 | .520 | −.006 |
+| r2 C_grid | .460 | .513 | .527 | .522 | .516 | .512 | −.015 |
+| r2 D_conf_sum | .435 | .503 | .550 | .558 | .549 | .549 | −.001 |
+| r2 oracle (B voxels) | .537 | .662 | .754 | .819 | .856 | .861 | |
+| r8 A_point | .468 | .534 | .589 | .603 | .596 | .590 | +.001 |
+| r8 B_argmax | .465 | .531 | .575 | .585 | .579 | .575 | .000 |
+| r8 C_on_B | .465 | .531 | .551 | .550 | .553 | .549 | −.002 |
+| r8 C_grid | .492 | .539 | .537 | .537 | .537 | .534 | −.003 |
+| r8 D_conf_sum | .465 | .531 | .572 | .584 | .581 | .573 | +.001 |
+| r8 oracle | .560 | .681 | .754 | .813 | .842 | .848 | |
+
+Verdict by the pre-registered rule: slope(C) − slope(A) = −0.017 / −0.026 (r2,
+C_on_B / C_grid) and −0.003 / −0.004 (r8): not ≥ +0.03; C(all) − A(all) =
+−0.042 / −0.050 (r2), −0.041 / −0.056 (r8): **C is below A by ≥ 0.03 at N = all
+on both sets → no.** With the reference frozen the point pipeline no longer
+falls (A: .551 → .562 and .589 → .590) while the posterior fusions still do
+(C_grid .527 → .512, .537 → .534) or sit 0.04–0.06 below. The only place the
+distribution is ahead is N = 1 with the room grid (+.026 / +.024, inside the
+band). Confidence-summed ranking (D) equals A within 0.02, as in E103.
+The E-filter and its matched control collapse exactly as before (recall).
+
+**Reading.** The depth distribution does not restore the value of extra
+views; under the corrected scoring it is the *only* family that still gets
+worse with N, because soft evidence spreads each view's wrong shell over a
+band and the bands of neighbouring, correlated views reinforce each other
+(E100 (c)). "Distribution" is closed on this data.
