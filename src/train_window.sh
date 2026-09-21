@@ -12,5 +12,5 @@ cd "$BASE"
 CUDA_VISIBLE_DEVICES=$GPU DATA_MODULE=data_0422 REPLICA_ROOT=/root/storage/replica_0422 R0422_SPLIT=off3 \
 STFT_WIN=$WIN STFT_HOP=$HOP REPLICA_SPEC_CACHE= \
 /opt/conda/envs/shared_audio/bin/python train_oaa.py --run-name $RUN --nviews $NV --data-mode $MODE \
-  --epochs 40 --batch-size 12 --accum 2 --lr 5e-4 --num-workers 8 --seed 0 --out-dir "$REPO/outputs/base_retrain" \
+  --epochs 40 --batch-size ${BS:-12} --accum ${ACC:-2} --lr 5e-4 --num-workers 8 --seed 0 --out-dir "$REPO/outputs/base_retrain" \
   > "$REPO/logs/$RUN.log" 2>&1
