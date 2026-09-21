@@ -136,7 +136,7 @@ def main() -> int:
 
     # ---- summary against CRITERIA_E101
     from scipy.stats import spearmanr
-    lines = [f"# E101 {a.mode}{a.tag} {a.split}: {df.groupby(["scene","seq"]).ngroups} sequences"]
+    lines = [f"# E101 {a.mode}{a.tag} {a.split}: {df.groupby(['scene', 'seq']).ngroups} sequences"]
     for oname in ("spread", "random", "sequential"):
         d = df[(df.order == oname) & (df.k >= 2)].dropna(subset=["prec_new_vox", "dist_nearest_m"])
         rho = spearmanr(d.dist_nearest_m, d.prec_new_vox).correlation
@@ -151,6 +151,20 @@ def main() -> int:
         lines.append(f"[{oname:10s}] H3 precision overlap vs new points by k: " + "; ".join(f"k={k}: {g.loc[k,'prec_overlap_pts']:.3f} vs {g.loc[k,'prec_new_pts']:.3f} (overlap {g.loc[k,'overlap_frac']:.2f}, new-vox prec {g.loc[k,'prec_new_vox']:.3f})" for k in ks))
         gmin = (g.prec_overlap_pts - g.prec_new_pts).min()
         lines.append(f"[{oname:10s}] H3 min over k>=2 of (overlap - new) = {gmin:+.3f}")
+        # issue B1: the same k, different distances. k and distance are confounded in the
+        # spread order (late views are necessarily close to an included one), so H1 is
+        # re-read within k: per-k Spearman and the row-weighted pooled value.
+        rk = spearmanr(d.k, d.dist_nearest_m).correlation
+        per_k = []
+        for kk, gk in d.groupby("k"):
+            if len(gk) >= 8 and gk.dist_nearest_m.nunique() >= 3:
+                per_k.append((int(kk), spearmanr(gk.dist_nearest_m, gk.prec_new_vox).correlation, len(gk)))
+        if per_k:
+            w = np.array([n for _, _, n in per_k], float); r_ = np.array([r for _, r, _ in per_k], float)
+            ok = np.isfinite(r_)
+            pooled = float((w[ok] * r_[ok]).sum() / w[ok].sum()) if ok.any() else float("nan")
+            lines.append(f"[{oname:10s}] B1 Spearman(k, dist) = {rk:+.3f}; within-k Spearman(dist, new-voxel precision), row-weighted over k = {pooled:+.3f} "
+                         f"(k with >= 8 rows: {len(per_k)}); per k: " + " ".join(f"k{kk}:{r:+.2f}(n{n})" for kk, r, n in per_k[:12]))
     d = df[(df.order == "spread") & (df.k >= 2)].dropna(subset=["prec_new_vox"])
     d = d.assign(bin=np.where(d.dist_nearest_m < 0.5, "<0.5", np.where(d.dist_nearest_m < 1.5, "0.5-1.5", ">=1.5")))
     per = d.groupby(["scene", "bin"]).prec_new_vox.agg(["mean", "std", "count"]).round(3)

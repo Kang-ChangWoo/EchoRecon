@@ -7,7 +7,7 @@
  "stride": "2",
  "max_depth": "10.0",
  "convention": "right0",
- "workers": "20",
+ "workers": "12",
  "tag": "",
  "out": "/root/storage/implementation/shared_audio/EchoRecon/results/E101_marginal_view"
 }

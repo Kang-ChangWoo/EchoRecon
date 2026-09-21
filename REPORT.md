@@ -1,5 +1,14 @@
 # Report
 
+> **Premise (owner, 2026-09-22).** This work *trains*. "Feed-forward" means no
+> per-scene optimisation at test time, not no learning; the training-free
+> Kalman-style line considered early on was dropped. The direction is to learn
+> the uncertainty, first inside the 2-D depth model, and to carry that learned
+> uncertainty into the multi-view 3-D fusion. Where a section below says an
+> analysis needed "no training", it means that diagnostic used the already
+> trained base model / head as they were; it is not a statement about the
+> method.
+
 Accumulated per stage: hypothesis, what was implemented, the result, how it is
 read, what failed, and the next experiment. Numbers are means over the 39
 held-out sequences of the three test scenes unless stated otherwise. Every
@@ -408,7 +417,7 @@ should not set even the box. Both are fixed in the next run.
 > C_on_B 0.574/0.605/0.520, C_grid 0.587/0.594/0.512, D_conf_sum
 > 0.589/0.617/0.549, E_conf_filter50 0.424/0.473/0.400; r8 A_point
 > 0.614/0.651/0.590, C_grid 0.612/0.613/0.534, D_conf_sum 0.613/0.642/0.573.
-> The shape is unchanged from v2: every method falls from N=4 on. The
+> The shape is unchanged from v2: every method falls from N=4 on. **[미검증 — head 수렴 전 비교: best epoch 2, flat init; issue A retrain pending]** The
 > project's centre then moved to the cause decomposition below (E100), and the
 > retrained heads planned in HANDOFF.md were not run.
 
@@ -730,19 +739,33 @@ new voxels.
 | H3 precision of overlapping vs new points, k = 2 / 4 / 8 / 16 / 24 | .85/.69, .79/.47, .76/.44, .74/.29, .69/.22 | | .82/.71, .81/.53, .77/.45, .76/.35, .69/.35 | | yes in spread order (min gap +.14 / +.11); fails at one k in random / sequential order |
 | overlap fraction at k = 2 / 8 / 24 (spread) | .11 / .78 / .92 | | .14 / .83 / .93 | | after 8 views, > 3/4 of every new view's points fall where someone already looked |
 
-**Reading.** An added view is useful where it agrees with someone (its
-overlapping points are .7–.85 precise) and harmful where it is alone (its new
-voxels are .2–.5 precise, worse the closer it stands to a view already in the
-set and worse the later it arrives, since what is still "new" after eight
-views is the far, oblique and hallucinated part). The precision decline with N
-is therefore the accumulation of every view's *unsupported* remainder, and
-neighbouring views contribute the least precise remainder. The wrong remainder
+**Confound found by the owner (2026-09-22) and re-analysis.** In the spread
+order k (the position at which a view is added) and the distance to the
+nearest included view are confounded: Spearman(k, distance) = −0.82 (random
+order −0.51). Within a fixed k the distance–precision correlation collapses:
+row-weighted within-k Spearman = **+0.06 (r2 spread), +0.04 (r2 random),
+−0.01 / 0.00 (r8)** against the +0.40 / +0.30 read before (`summary.txt`, "B1"
+lines, `src/marginal_view.py`). H1 as pre-registered did not control k and
+therefore passed on the confound. **The corrected statement is: late views are
+worse, not near views** — what is still unoccupied after k views is the far,
+oblique and hallucinated part, whatever the spacing. E102's premise
+(baseline-aware support) was derived from the uncorrected reading and its
+null result is consistent with the corrected one; the direct test of spacing
+is E102b below.
+
+**Reading (corrected).** An added view is useful where it agrees with someone
+(its overlapping points are .7–.85 precise) and harmful where it is alone (its
+new voxels are .2–.5 precise, and worse the later it arrives, independent of
+its distance to the set once k is held fixed). The precision decline with N
+is therefore the accumulation of every view's *unsupported* remainder; the
+earlier sentence "neighbouring views contribute the least precise remainder"
+is withdrawn (confound above). The wrong remainder
 is one third near misses, one third displaced by 0.5–1 m, one third
 hallucinated beyond 1 m, so neither "sharpen the depth" nor "remove
 hallucinations" alone can remove more than about a third of it. The
-remedy family this selects is *baseline-aware support*: count agreement only
-between views far enough apart to be independent (E100 (c): r 0.9 below
-0.5 m, 0.4 above 1.5 m), which is one knob and no training.
+remedy family this *seemed* to select was baseline-aware support (E102); with
+the confound removed it selects nothing about spacing, and E102's null is the
+expected outcome.
 
 **[미확인].** Val split not run (no hyper-parameter); the same analysis on the
 short-window models; whether the hallucinated third is stable across scenes
@@ -886,7 +909,7 @@ pre-registered and is read as descriptive.
 [미확인]: the elevation curve after the ERP solid-angle correction (the
 catalogue's confound); the per-scene split.
 
-## E105: the depth distribution under the fixed reference — no
+## E105: the depth distribution under the fixed reference — no [미검증 — head 수렴 전 비교; issue A retrain pending]
 
 **Why.** Stage D's verdict on posterior fusion was reached under the moving
 reference. E105 is Stage D v3 re-run with `--ref fixed` (GT of every step),
@@ -925,4 +948,4 @@ The E-filter and its matched control collapse exactly as before (recall).
 views; under the corrected scoring it is the *only* family that still gets
 worse with N, because soft evidence spreads each view's wrong shell over a
 band and the bands of neighbouring, correlated views reinforce each other
-(E100 (c)). "Distribution" is closed on this data.
+(E100 (c)). "Distribution" is closed on this data. **[미검증 — head 수렴 전 비교: best epoch 2, flat init; issue A retrain pending]**

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""E100: cause decomposition of the falling view-count curve (no training, CPU only).
+"""E100: cause decomposition of the falling view-count curve (re-scoring of the trained base model; no additional training, CPU only).
 
 Criteria are pre-registered in results/E100_cause/CRITERIA.md. One pass per
 sequence: unproject every step once, then evaluate every (N, seed, variant,

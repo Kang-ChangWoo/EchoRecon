@@ -3,14 +3,17 @@
 [spread    ] H2 wrong new voxels: near miss 0.2-0.5 m 41.2%, displaced 0.5-1 m 28.3%, hallucinated >1 m 30.5% (n 1755936)
 [spread    ] H3 precision overlap vs new points by k: k=2: 0.823 vs 0.710 (overlap 0.14, new-vox prec 0.504); k=4: 0.805 vs 0.525 (overlap 0.67, new-vox prec 0.419); k=8: 0.771 vs 0.446 (overlap 0.83, new-vox prec 0.363); k=16: 0.763 vs 0.347 (overlap 0.90, new-vox prec 0.290); k=24: 0.693 vs 0.350 (overlap 0.93, new-vox prec 0.313)
 [spread    ] H3 min over k>=2 of (overlap - new) = +0.113
+[spread    ] B1 Spearman(k, dist) = -0.821; within-k Spearman(dist, new-voxel precision), row-weighted over k = -0.007 (k with >= 8 rows: 31); per k: k2:+0.16(n39) k3:-0.04(n39) k4:-0.03(n39) k5:-0.03(n39) k6:-0.09(n39) k7:-0.07(n39) k8:+0.21(n39) k9:-0.15(n39) k10:-0.01(n39) k11:-0.29(n39) k12:-0.16(n39) k13:-0.22(n39)
 [random    ] H1 Spearman(dist to nearest included view, new-voxel precision) = +0.262 (n 884); new-voxel precision by distance: 0-0.5m: 0.308 (n 782), 0.5-1.5m: 0.418 (n 80), 1.5-99m: 0.479 (n 22)
 [random    ] H2 wrong new voxels: near miss 0.2-0.5 m 41.3%, displaced 0.5-1 m 28.4%, hallucinated >1 m 30.3% (n 1751851)
 [random    ] H3 precision overlap vs new points by k: k=2: 0.836 vs 0.624 (overlap 0.37, new-vox prec 0.500); k=4: 0.794 vs 0.516 (overlap 0.69, new-vox prec 0.410); k=8: 0.761 vs 0.391 (overlap 0.84, new-vox prec 0.328); k=16: 0.786 vs 0.410 (overlap 0.88, new-vox prec 0.334); k=24: 0.711 vs 0.234 (overlap 0.91, new-vox prec 0.204)
 [random    ] H3 min over k>=2 of (overlap - new) = -0.142
+[random    ] B1 Spearman(k, dist) = -0.508; within-k Spearman(dist, new-voxel precision), row-weighted over k = -0.001 (k with >= 8 rows: 31); per k: k2:-0.10(n39) k3:+0.11(n39) k4:-0.01(n39) k5:+0.20(n39) k6:+0.17(n39) k7:-0.13(n39) k8:+0.06(n39) k9:+0.36(n39) k10:+0.01(n39) k11:-0.12(n39) k12:-0.05(n39) k13:+0.14(n39)
 [sequential] H1 Spearman(dist to nearest included view, new-voxel precision) = -0.013 (n 884); new-voxel precision by distance: 0-0.5m: 0.341 (n 884), 0.5-1.5m: nan (n 0), 1.5-99m: nan (n 0)
 [sequential] H2 wrong new voxels: near miss 0.2-0.5 m 41.2%, displaced 0.5-1 m 28.3%, hallucinated >1 m 30.5% (n 1755649)
 [sequential] H3 precision overlap vs new points by k: k=2: 0.771 vs 0.529 (overlap 0.69, new-vox prec 0.445); k=4: 0.757 vs 0.461 (overlap 0.81, new-vox prec 0.400); k=8: 0.752 vs 0.447 (overlap 0.85, new-vox prec 0.374); k=16: 0.763 vs 0.423 (overlap 0.88, new-vox prec 0.336); k=24: 0.705 vs 0.325 (overlap 0.87, new-vox prec 0.261)
 [sequential] H3 min over k>=2 of (overlap - new) = -0.035
+[sequential] B1 Spearman(k, dist) = +0.036; within-k Spearman(dist, new-voxel precision), row-weighted over k = +0.012 (k with >= 8 rows: 31); per k: k2:+0.12(n39) k3:+0.19(n39) k4:+0.14(n39) k5:-0.22(n39) k6:+0.01(n39) k7:+0.06(n39) k8:-0.08(n39) k9:+0.17(n39) k10:+0.04(n39) k11:-0.09(n39) k12:+0.20(n39) k13:-0.27(n39)
 per scene, spread order, new-voxel precision by distance bin:
                           mean    std  count
 scene           bin                         
