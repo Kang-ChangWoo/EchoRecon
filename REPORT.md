@@ -949,3 +949,74 @@ views; under the corrected scoring it is the *only* family that still gets
 worse with N, because soft evidence spreads each view's wrong shell over a
 band and the bands of neighbouring, correlated views reinforce each other
 (E100 (c)). "Distribution" is closed on this data. **[미검증 — head 수렴 전 비교: best epoch 2, flat init; issue A retrain pending]**
+
+## E102b: distance-based view selection — count, not spacing
+
+**Why.** Issue B's direct experiment: adopt only views ≥ Δ apart (greedy from
+step 0) and compare with a random subset and the consecutive block of the
+*same count*. Pre-registered in `results/E100_cause/CRITERIA_B_C.md`; verdict
+setting = fixed reference, every voxel (frac 1.0), where the fall exists.
+`src/view_select.py`, `results/E102b_view_select/{r2,r8}/summary.txt`.
+
+| fixed ref, F1@0.2 | Δ (n views, span) | all views | Δ-spaced | random same n | consecutive same n | spaced − random [CI] |
+|---|---|---|---|---|---|---|
+| r2 frac 1.0 | 0.3 (9.8, 3.3 m) | .475 | .512 | .499 | .475 | +0.013 [+.008, +.019] |
+| | 0.5 (6.3, 3.2 m) | | .520 | .503 | .471 | +0.017 [+.008, +.027] |
+| | 1.0 (3.9, 3.0 m) | | .526 | .512 | .459 | +0.014 [+.004, +.024] |
+| r8 frac 1.0 | 0.3 / 0.5 / 1.0 | .515 | .547 / .561 / .563 | .535 / .540 / .554 | .517 / .510 / .501 | +0.012 / +0.021 / +0.009 |
+| r2 frac 0.25 | 0.3 / 0.5 / 1.0 | .561 | .544 / .531 / .500 | .534 / .497 / .479 | .483 / .452 / .415 | +0.010 / **+0.034** / +0.021 |
+| r8 frac 0.25 | 0.3 / 0.5 / 1.0 | .590 | .568 / .552 / .522 | .558 / .519 / .504 | .516 / .476 / .440 | +0.010 / **+0.033** / +0.018 |
+
+**Verdict: no effect** at the verdict setting on both sets (every gain over a
+random subset of the same size is inside the band, 0.009–0.021). Using fewer
+views raises the all-voxel F1 by 0.04–0.05 whether they are spaced or random
+(spaced − all = +0.04, random − all = +0.03): the all-voxel fall is a function
+of *how many* views are added, not of how far apart they are. Consecutive
+blocks are worse than both (−0.03 to −0.07), which is the compact-subset
+result of E100 (b) again — but a random subset with the same count already
+captures nearly all of that. At the top-quarter operating point spacing shows
+a small effect at Δ = 0.5 (+0.034 / +0.033 vs random, CI above 0) while
+dropping views costs more than it gains (spaced − all = −0.030 / −0.038).
+Together with the within-k re-analysis of E101, spacing is not a lever on
+this data.
+
+## E107: the confidence paradox, measured
+
+**Why.** Issue C. The per-ray confidence ranks rays well (Stage D: wrong rate
+84.5 % → 0.8 % across deciles) yet weighting gains nothing and filtering
+collapses F1. The repository's explanation — the low-confidence rays are the
+only source of far and oblique surfaces — was asserted, not measured. Rule
+pre-registered in `CRITERIA_B_C.md`: supported if (i) ≥ 60 % of the lost
+correct voxels are far (≥ 4 m) or oblique (≥ 60°) and (ii) the lost fraction
+of correct voxels in the far or oblique bins is ≥ 2× the near-and-frontal
+one. `src/conf_loss_decomp.py`, `results/E107_conf_paradox/<mode>_q50*`,
+posterior-head B cloud at N = all, per-view median filter, 39 test sequences.
+
+| | r2 | r8 |
+|---|---|---|
+| voxels lost by the filter / correct voxels lost | 91.9 % / **82.3 %** | 90.2 % / **80.0 %** |
+| lost fraction of correct voxels: near-frontal (<2 m, <30°) | 0.375 | 0.332 |
+| … mid-range 2–4 m, by incidence <30 / 30–60 / ≥60° | .94 / .88 / .98 | .93 / .85 / .95 |
+| … far ≥ 4 m (any incidence) | **1.000** | **1.000** |
+| … oblique ≥ 60° (any range) | 0.947 | 0.929 |
+| (ii) far / oblique vs near-frontal | 2.7× / 2.5× | 3.0× / 2.8× |
+| (i) share of lost-correct voxels that are far or oblique | 0.466 | 0.470 |
+| recall@0.2 of the reference by range <2 / 2–4 / ≥4 m: full cloud | .974 / .811 / .429 | .979 / .768 / .393 |
+| … after the filter | .636 / .117 / **.000** | .657 / .128 / **.000** |
+| per scene (i); far rate vs near-frontal rate | apt2 .42; 1.00 vs .30 · frl5 .47; 1.00 vs .45 · off4 .52; 1.00 vs .37 | .42; 1.00 vs .26 · .47; 1.00 vs .41 · .53; 1.00 vs .33 |
+
+**Verdict.** (ii) holds with room to spare (far 100 %, oblique 93–95 %, vs
+33–38 % near-frontal); (i) does not (0.47 < 0.6) because the lost right
+answers are spread over the whole mid-range too: at 2–4 m the filter deletes
+85–98 % of the correct voxels at every incidence. So the repository's sentence
+is *too narrow*, not wrong: **the low-confidence half of the rays is the sole
+source of everything beyond 4 m, of 93 % of the oblique surfaces, and of
+85–98 % of the mid-range ones; after the filter the reconstruction reaches
+2 m and stops** (recall .12 at 2–4 m, .000 beyond 4 m). Confidence is high
+only where the geometry is easy — near, frontal, i.e. the floor/ceiling band
+of E104 — so it re-ranks nothing that support and range do not already rank,
+and removing the "uncertain" rays removes the room. This is the direct
+measurement behind the ambiguity-preservation premise: the uncertain rays
+carry the far field, and any scheme that spends confidence by *discarding*
+must fail; it has to be spent by *representing*. Whether the retrained
+posterior head (issue A) can do that is the open question.

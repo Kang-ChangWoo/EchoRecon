@@ -1,0 +1,21 @@
+# E102b r8 test: 39 sequences (0.8 min)
+
+## ref fixed, frac 1.0: F1(all views) = 0.515 (n = 23.7)
+Δ=0.3: n=9.8 span 3.27 m | spaced 0.547 (P 0.442 R 0.729) random-same-n 0.535 consec-same-n 0.517 | spaced−random +0.012 CI[+0.006,+0.020] no effect; spaced−consec +0.030; spaced−all +0.033 | per scene (vs random) apartment_2:+0.014, frl_apartment_5:+0.013, office_4:+0.011
+Δ=0.5: n=6.3 span 3.16 m | spaced 0.561 (P 0.472 R 0.700) random-same-n 0.540 consec-same-n 0.510 | spaced−random +0.021 CI[+0.014,+0.029] no effect; spaced−consec +0.052; spaced−all +0.047 | per scene (vs random) apartment_2:+0.026, frl_apartment_5:+0.020, office_4:+0.019
+Δ=1.0: n=3.9 span 3.04 m | spaced 0.563 (P 0.499 R 0.654) random-same-n 0.554 consec-same-n 0.501 | spaced−random +0.009 CI[-0.001,+0.021] no effect; spaced−consec +0.062; spaced−all +0.049 | per scene (vs random) apartment_2:+0.012, frl_apartment_5:-0.001, office_4:+0.019
+
+## ref fixed, frac 0.25: F1(all views) = 0.590 (n = 23.7)
+Δ=0.3: n=9.8 span 3.27 m | spaced 0.568 (P 0.692 R 0.486) random-same-n 0.558 consec-same-n 0.516 | spaced−random +0.010 CI[+0.002,+0.018] no effect; spaced−consec +0.052; spaced−all -0.022 | per scene (vs random) apartment_2:+0.006, frl_apartment_5:+0.015, office_4:+0.007
+Δ=0.5: n=6.3 span 3.16 m | spaced 0.552 (P 0.713 R 0.454) random-same-n 0.519 consec-same-n 0.476 | spaced−random +0.033 CI[+0.023,+0.043] restores; spaced−consec +0.076; spaced−all -0.038 | per scene (vs random) apartment_2:+0.036, frl_apartment_5:+0.022, office_4:+0.043
+Δ=1.0: n=3.9 span 3.04 m | spaced 0.522 (P 0.727 R 0.412) random-same-n 0.504 consec-same-n 0.440 | spaced−random +0.018 CI[+0.005,+0.033] no effect; spaced−consec +0.082; spaced−all -0.067 | per scene (vs random) apartment_2:+0.020, frl_apartment_5:+0.007, office_4:+0.031
+
+## ref subset, frac 1.0: F1(all views) = 0.515 (n = 23.7)
+Δ=0.3: n=9.8 span 3.27 m | spaced 0.556 (P 0.439 R 0.774) random-same-n 0.542 consec-same-n 0.521 | spaced−random +0.014 CI[+0.007,+0.021] no effect; spaced−consec +0.035; spaced−all +0.041 | per scene (vs random) apartment_2:+0.015, frl_apartment_5:+0.013, office_4:+0.014
+Δ=0.5: n=6.3 span 3.16 m | spaced 0.577 (P 0.465 R 0.772) random-same-n 0.558 consec-same-n 0.523 | spaced−random +0.019 CI[+0.013,+0.026] no effect; spaced−consec +0.054; spaced−all +0.062 | per scene (vs random) apartment_2:+0.025, frl_apartment_5:+0.017, office_4:+0.016
+Δ=1.0: n=3.9 span 3.04 m | spaced 0.592 (P 0.491 R 0.759) random-same-n 0.581 consec-same-n 0.527 | spaced−random +0.011 CI[+0.001,+0.022] no effect; spaced−consec +0.065; spaced−all +0.077 | per scene (vs random) apartment_2:+0.013, frl_apartment_5:+0.002, office_4:+0.021
+
+## ref subset, frac 0.25: F1(all views) = 0.590 (n = 23.7)
+Δ=0.3: n=9.8 span 3.27 m | spaced 0.612 (P 0.690 R 0.556) random-same-n 0.600 consec-same-n 0.563 | spaced−random +0.012 CI[+0.005,+0.020] no effect; spaced−consec +0.049; spaced−all +0.023 | per scene (vs random) apartment_2:+0.008, frl_apartment_5:+0.016, office_4:+0.012
+Δ=0.5: n=6.3 span 3.16 m | spaced 0.627 (P 0.710 R 0.567) random-same-n 0.605 consec-same-n 0.556 | spaced−random +0.022 CI[+0.014,+0.029] no effect; spaced−consec +0.071; spaced−all +0.037 | per scene (vs random) apartment_2:+0.032, frl_apartment_5:+0.013, office_4:+0.023
+Δ=1.0: n=3.9 span 3.04 m | spaced 0.634 (P 0.724 R 0.570) random-same-n 0.622 consec-same-n 0.557 | spaced−random +0.012 CI[+0.001,+0.023] no effect; spaced−consec +0.077; spaced−all +0.044 | per scene (vs random) apartment_2:+0.010, frl_apartment_5:+0.003, office_4:+0.026

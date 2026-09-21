@@ -1,0 +1,23 @@
+# E107 r2, filter = per-view confidence below the 50% quantile dropped, N = all, 39 sequences
+voxels 3337405, lost 91.9%; correct 31.8%; lost among correct 82.3%
+rows = range {<2, 2-4, >=4 m}, cols = incidence {<30, 30-60, >=60 deg}
+share of ALL voxels per bin:
+[[0.039 0.08  0.057]
+ [0.087 0.199 0.229]
+ [0.081 0.079 0.149]]
+share of LOST-CORRECT voxels per bin (where the lost right answers were):
+[[0.039 0.092 0.045]
+ [0.104 0.298 0.23 ]
+ [0.057 0.053 0.083]]
+fraction of correct voxels LOST per bin (the 'sole source' rate):
+[[0.375 0.531 0.741]
+ [0.942 0.876 0.982]
+ [1.    1.    1.   ]]
+precision (correct/all) per bin, full cloud:
+[[0.698 0.565 0.275]
+ [0.334 0.449 0.268]
+ [0.183 0.175 0.145]]
+(i) share of lost-correct voxels that are far (>=4 m) or oblique (>=60 deg): 0.466
+(ii) lost fraction of correct voxels: near&frontal 0.375, far 1.000 (2.7x), oblique 0.947 (2.5x)
+(iii) recall@0.2 of the reference by range bin {<2, 2-4, >=4 m}: full cloud [0.974 0.811 0.429], after the filter [6.363e-01 1.172e-01 1.837e-05] (reference share per bin [0.36 0.43 0.21])
+per scene: apartment_2: (i) 0.42, far rate 1.00 vs near&frontal 0.30; frl_apartment_5: (i) 0.47, far rate 1.00 vs near&frontal 0.45; office_4: (i) 0.52, far rate 1.00 vs near&frontal 0.37
