@@ -692,7 +692,14 @@ came out identical to the released model: test ERP MAE 0.293 (paired −0.003),
 all-voxel fixed-reference F1 N=1/4/16/all .425/.529/.493/.478 with drop16
 +0.036, top-25 % drop16 −0.050, same-plane r .927, cross-view r .860 / .387,
 contradiction gap +.150. Hop 160 → 32 alone changes nothing either, so the
-three retrains are a clean null for the front-end.
+three retrains are a clean null for the front-end. The r8 retrain at
+win 128 / hop 32 (`oaa_r8_w128_h32`, its released recipe bs 3 × accum 11; val
+MAE 0.286 vs released 0.266) is slightly *worse* single-view (test ERP MAE
+0.266 vs 0.253, paired +0.013) and otherwise the same: all-voxel fixed-reference
+F1 N=1/4/16/all .454/.558/.529/.514, drop16 +0.030 (released +0.037), top-25 %
+drop16 −0.056, same-plane r .915, cross-view r .914 / .397, contradiction gap
++.162, contra1 +0.036 vs support_match1 +0.056. Four front-end retrains, two
+observation sets: the window is not the lever.
 
 **Not done / [미확인].** the w400/h32 hop control; an r8 short-window retrain; the direct confidence-asymmetry test; a
 mesh-derived reference (E80) — the fixed reference here is still the fused GT
