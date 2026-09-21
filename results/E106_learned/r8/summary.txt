@@ -1,0 +1,14 @@
+
+## N=4, top 25%, fixed reference, 39 sequences
+support      F1 0.528 P 0.705 R 0.424 AUROC 0.671 | gain +0.000 CI[+0.000,+0.000] no effect | apartment_2:+0.000±0.000, frl_apartment_5:+0.000±0.000, office_4:+0.000±0.000
+logit_count  F1 0.528 P 0.705 R 0.424 AUROC 0.671 | gain +0.000 CI[+0.000,+0.000] no effect | apartment_2:+0.000±0.000, frl_apartment_5:+0.000±0.000, office_4:+0.000±0.000
+mlp_noconf   F1 0.549 P 0.817 R 0.415 AUROC 0.786 | gain +0.021 CI[+0.009,+0.034] no effect | apartment_2:-0.014±0.031, frl_apartment_5:+0.049±0.031, office_4:+0.022±0.024
+mlp_all      F1 0.557 P 0.822 R 0.423 AUROC 0.793 | gain +0.029 CI[+0.019,+0.039] no effect | apartment_2:-0.002±0.025, frl_apartment_5:+0.049±0.025, office_4:+0.036±0.023
+
+## N=all, top 25%, fixed reference, 39 sequences
+support      F1 0.573 P 0.623 R 0.535 AUROC 0.690 | gain +0.000 CI[+0.000,+0.000] no effect | apartment_2:+0.000±0.000, frl_apartment_5:+0.000±0.000, office_4:+0.000±0.000
+logit_count  F1 0.573 P 0.623 R 0.535 AUROC 0.690 | gain +0.000 CI[+0.000,+0.000] no effect | apartment_2:+0.000±0.000, frl_apartment_5:+0.000±0.000, office_4:+0.000±0.000
+mlp_noconf   F1 0.609 P 0.699 R 0.543 AUROC 0.760 | gain +0.036 CI[+0.028,+0.044] meaningful | apartment_2:+0.023±0.018, frl_apartment_5:+0.039±0.027, office_4:+0.044±0.025
+mlp_all      F1 0.610 P 0.711 R 0.539 AUROC 0.764 | gain +0.037 CI[+0.026,+0.047] meaningful | apartment_2:+0.031±0.012, frl_apartment_5:+0.034±0.049, office_4:+0.047±0.026
+
+MLP AUROC on pooled test voxels (N=all): 0.757; permutation importance (AUROC drop): abs_elev_mean:0.116, range_mean:0.088, range_min:0.060, span:0.052, views:0.036, conf_min:0.036, contra:0.035, spread_deg:0.030, conf_mean:0.027, count:0.020, conf_max:0.016, frac_views:0.012, cells0.6:0.008, N:0.006, cells1.0:0.004, cells0.3:0.002

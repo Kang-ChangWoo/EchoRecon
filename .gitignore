@@ -5,3 +5,4 @@ __pycache__/
 *.npy
 *.png
 logs/
+results/E106_learned/features/
