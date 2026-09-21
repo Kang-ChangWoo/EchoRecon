@@ -1020,3 +1020,55 @@ measurement behind the ambiguity-preservation premise: the uncertain rays
 carry the far field, and any scheme that spends confidence by *discarding*
 must fail; it has to be spent by *representing*. Whether the retrained
 posterior head (issue A) can do that is the open question.
+
+## E106: learned per-voxel evidence — the fast test of the graph's premise
+
+**Why.** The bipartite graph's promise is that edges carrying per-observation
+information let the fusion separate right voxels from wrong ones better than
+counting. The proxy pre-registered in `CRITERIA_E104_E106.md`: a small MLP
+(16 → 64 → 64 → 1) on per-voxel aggregates of exactly those messages, trained
+on the val scenes (3.9 M / 3.5 M voxels, N = 4 and N = all rows) to predict
+"within 0.2 m of the fixed reference", used as a ranking on the test scenes;
+controls = point count and a count-only logistic. Ablation by feature group
+(added after the first read): *single-view* = elevation, range (mean, min),
+count, N; *inter-view* = views, Δ-cells, span, viewing-angle spread,
+free-space contradictions, fraction of views, count, N. `src/voxel_features.py`,
+`src/e106_learn.py`, `results/E106_learned/<mode>[_single|_inter]/summary.txt`.
+
+| fixed ref, top 25 %, N = all | r2 F1 (P/R) | r2 AUROC | r2 gain [CI] | r8 F1 (P/R) | r8 AUROC | r8 gain [CI] |
+|---|---|---|---|---|---|---|
+| support (count) | .554 (.576/.541) | .692 | | .573 (.623/.535) | .690 | |
+| count-only logistic | .554 | .692 | 0.000 | .573 | .690 | 0.000 |
+| MLP, all 16 features | .592 (.658/.544) | .758 | **+0.037 [+.028, +.046]** | .610 (.711/.539) | .764 | **+0.037 [+.026, +.047]** |
+| MLP, no confidence | .594 | .758 | **+0.040 [+.033, +.047]** | .609 | .760 | **+0.036 [+.028, +.044]** |
+| MLP, single-view group only | .585 (.637/.545) | .753 | **+0.031 [+.023, +.038]** | .594 (.679/.531) | .749 | +0.021 [+.014, +.028] |
+| MLP, inter-view group only | .573 (.593/.560) | .699 | +0.018 [+.014, +.023] | .597 (.646/.558) | .711 | +0.023 [+.018, +.030] |
+| at N = 4, MLP all | .538 | .789 | +0.017 | .557 | .793 | +0.029 |
+| per scene, MLP all, N = all | apt2 +.038, frl5 +.025, off4 +.052 | | | apt2 +.031, frl5 +.034, off4 +.047 | | |
+
+Permutation importance (AUROC drop, full model): elevation .12, range .06–.09,
+viewing-angle spread .03–.05, views .04–.05, span .04–.05, contradictions
+.035, confidence ≤ .03, count .01–.02, Δ-cells < .01. In the single-view
+model `range_min` alone is worth .26.
+
+**Verdict.** The learned ranking is *meaningful* on both sets by the
+pre-registered rule (+0.037 / +0.037, CIs clear of 0, every scene positive)
+and needs no confidence (E103 again). The ablation says where it comes from:
+the single-view group — how far and at what elevation the predictor placed
+the voxel — carries most of it (+0.031 on r2, meaningful; +0.021 on r8), and
+the inter-view group — everything a graph edge would carry — is inside the
+band on both sets (+0.018 / +0.023) with an AUROC (.70 / .71) barely above
+the count's (.69). The two groups add up on r8 (+0.037) rather than one of
+them sufficing. **The graph's premise is therefore not supported on this
+data:** the between-view messages are worth at most 0.02 over counting, and
+a learned graph over them cannot be expected to find more unless it extracts
+something these aggregates miss. What *is* supported is a learned prior on
+where the single-view predictor is right (near, off-horizon), i.e. learned
+uncertainty inside the 2-D model — the owner's direction — used as a
+ranking rather than as a filter (E107). The full bipartite model is not
+built; the fully-connected control it would need is the base model itself.
+
+[미확인]: the same learner trained on the train scenes' predictions (the
+head here is fitted on val, which is legitimate for a ranking but leaves the
+val scenes unavailable for anything else); the interaction with the
+retrained posterior head (issue A).

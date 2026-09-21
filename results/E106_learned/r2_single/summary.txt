@@ -1,0 +1,15 @@
+# E106 r2 group=single features=[np.str_('abs_elev_mean'), np.str_('range_mean'), np.str_('range_min'), np.str_('count'), np.str_('N')]
+
+## N=4, top 25%, fixed reference, 39 sequences
+support      F1 0.520 P 0.672 R 0.427 AUROC 0.673 | gain +0.000 CI[+0.000,+0.000] no effect | apartment_2:+0.000±0.000, frl_apartment_5:+0.000±0.000, office_4:+0.000±0.000
+logit_count  F1 0.520 P 0.672 R 0.427 AUROC 0.673 | gain +0.000 CI[+0.000,+0.000] no effect | apartment_2:+0.000±0.000, frl_apartment_5:+0.000±0.000, office_4:+0.000±0.000
+mlp_noconf   F1 0.527 P 0.765 R 0.404 AUROC 0.771 | gain +0.007 CI[-0.003,+0.016] no effect | apartment_2:-0.005±0.028, frl_apartment_5:+0.012±0.033, office_4:+0.011±0.030
+mlp_all      F1 0.527 P 0.765 R 0.404 AUROC 0.771 | gain +0.007 CI[-0.003,+0.016] no effect | apartment_2:-0.005±0.028, frl_apartment_5:+0.012±0.033, office_4:+0.011±0.030
+
+## N=all, top 25%, fixed reference, 39 sequences
+support      F1 0.554 P 0.576 R 0.541 AUROC 0.692 | gain +0.000 CI[+0.000,+0.000] no effect | apartment_2:+0.000±0.000, frl_apartment_5:+0.000±0.000, office_4:+0.000±0.000
+logit_count  F1 0.554 P 0.576 R 0.541 AUROC 0.692 | gain +0.000 CI[+0.000,+0.000] no effect | apartment_2:+0.000±0.000, frl_apartment_5:+0.000±0.000, office_4:+0.000±0.000
+mlp_noconf   F1 0.585 P 0.637 R 0.545 AUROC 0.753 | gain +0.031 CI[+0.023,+0.038] meaningful | apartment_2:+0.036±0.012, frl_apartment_5:+0.015±0.026, office_4:+0.045±0.023
+mlp_all      F1 0.585 P 0.637 R 0.545 AUROC 0.753 | gain +0.031 CI[+0.023,+0.038] meaningful | apartment_2:+0.036±0.012, frl_apartment_5:+0.015±0.026, office_4:+0.045±0.023
+
+MLP AUROC on pooled test voxels (N=all): 0.743; permutation importance (AUROC drop): range_min:0.264, abs_elev_mean:0.071, range_mean:0.070, count:0.065, N:0.001

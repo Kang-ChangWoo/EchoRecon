@@ -1,0 +1,15 @@
+# E106 r8 group=inter features=[np.str_('views'), np.str_('cells0.3'), np.str_('cells0.6'), np.str_('cells1.0'), np.str_('span'), np.str_('spread_deg'), np.str_('contra'), np.str_('frac_views'), np.str_('count'), np.str_('N')]
+
+## N=4, top 25%, fixed reference, 39 sequences
+support      F1 0.528 P 0.705 R 0.424 AUROC 0.671 | gain +0.000 CI[+0.000,+0.000] no effect | apartment_2:+0.000±0.000, frl_apartment_5:+0.000±0.000, office_4:+0.000±0.000
+logit_count  F1 0.528 P 0.705 R 0.424 AUROC 0.671 | gain +0.000 CI[+0.000,+0.000] no effect | apartment_2:+0.000±0.000, frl_apartment_5:+0.000±0.000, office_4:+0.000±0.000
+mlp_noconf   F1 0.551 P 0.727 R 0.446 AUROC 0.694 | gain +0.023 CI[+0.018,+0.029] no effect | apartment_2:+0.014±0.015, frl_apartment_5:+0.025±0.011, office_4:+0.031±0.023
+mlp_all      F1 0.551 P 0.727 R 0.446 AUROC 0.694 | gain +0.023 CI[+0.018,+0.029] no effect | apartment_2:+0.014±0.015, frl_apartment_5:+0.025±0.011, office_4:+0.031±0.023
+
+## N=all, top 25%, fixed reference, 39 sequences
+support      F1 0.573 P 0.623 R 0.535 AUROC 0.690 | gain +0.000 CI[+0.000,+0.000] no effect | apartment_2:+0.000±0.000, frl_apartment_5:+0.000±0.000, office_4:+0.000±0.000
+logit_count  F1 0.573 P 0.623 R 0.535 AUROC 0.690 | gain +0.000 CI[+0.000,+0.000] no effect | apartment_2:+0.000±0.000, frl_apartment_5:+0.000±0.000, office_4:+0.000±0.000
+mlp_noconf   F1 0.597 P 0.646 R 0.558 AUROC 0.711 | gain +0.023 CI[+0.018,+0.030] no effect | apartment_2:+0.026±0.018, frl_apartment_5:+0.015±0.017, office_4:+0.032±0.022
+mlp_all      F1 0.597 P 0.646 R 0.558 AUROC 0.711 | gain +0.023 CI[+0.018,+0.030] no effect | apartment_2:+0.026±0.018, frl_apartment_5:+0.015±0.017, office_4:+0.032±0.022
+
+MLP AUROC on pooled test voxels (N=all): 0.713; permutation importance (AUROC drop): count:0.134, spread_deg:0.097, span:0.059, contra:0.050, views:0.039, frac_views:0.017, cells0.6:0.016, N:0.009, cells1.0:0.009, cells0.3:0.006
