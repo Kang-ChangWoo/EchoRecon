@@ -44,13 +44,23 @@ def one_sequence(job):
     C = z["conf"].astype(np.float32) if "conf" in z.files else None      # E103: per-ray confidence
     S = Sequence(sc, sq); T = len(steps); H, W = P_face.shape[1:]
     dirs = ray_dirs(H, W, a["convention"]); dirs_s = dirs[::stride, ::stride]
-    origins, clouds, gts, confs = [], [], [], []
+    origins, clouds, gts, confs, ews = [], [], [], [], []
+    EW = None
+    if a.get("elev_weights"):
+        import json as _json
+        lj = _json.loads(Path(a["elev_weights"]).read_text())
+        wr_el = np.asarray(lj["wrong_rate_el"]); NE = len(wr_el)
+        v_ = (np.arange(H) + 0.5) / H; phi = (0.5 - v_) * 180.0
+        el = np.clip(np.floor((phi + 90.0) / (180.0 / NE)).astype(int), 0, NE - 1)
+        EW = np.broadcast_to((1.0 - wr_el)[el][:, None], (H, W))[::stride, ::stride]
     for k, i in enumerate(steps):
         pose = S.pose(i); R = quat_to_R(pose["rotation"]); o = np.asarray(pose["position"], float); origins.append(o)
         d = to_radial(P_face[k], dirs, "face")[::stride, ::stride]; v = np.isfinite(d) & (d > 0) & (d < md)
         clouds.append((dirs_s[v] * d[v][:, None]) @ R.T + o)
         if C is not None:
             confs.append(C[k][::stride, ::stride][v])
+        if EW is not None:
+            ews.append(EW[v])
         g = to_radial(resize_nearest(S.gt_depth(i, "face"), (H, W)), dirs, "face")[::stride, ::stride]
         gv = np.isfinite(g) & (g > 0) & (g < md)
         gts.append((dirs_s[gv] * g[gv][:, None]) @ R.T + o)
@@ -81,6 +91,8 @@ def one_sequence(job):
             mx = np.full(nv, -np.inf); mn = np.full(nv, np.inf)
             np.maximum.at(mx, vox_of, proj[view_of]); np.minimum.at(mn, vox_of, proj[view_of])
             scores["span"] = (mx - mn) + 1e-3 * cnt
+            if EW is not None:
+                scores["elev_sum"] = np.bincount(inv, weights=np.concatenate([ews[j] for j in idx]), minlength=nv)
             if C is not None:
                 cpts = np.concatenate([confs[j] for j in idx])
                 csum = np.bincount(inv, weights=cpts, minlength=nv)
@@ -122,6 +134,7 @@ def main() -> int:
     ap.add_argument("--seeds", type=int, default=3)
     ap.add_argument("--workers", type=int, default=24)
     ap.add_argument("--tag", default="")
+    ap.add_argument("--elev-weights", default=None, help="E104 post-hoc: results/E104_lobe/<mode>_val.json; adds the elev_sum ranking")
     ap.add_argument("--out", type=Path, default=REPO / "results" / "E102_baseline_support")
     a = ap.parse_args()
     a.pred_dir = a.pred_dir or str(REPO / "outputs" / "pred" / a.mode)

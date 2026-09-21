@@ -847,3 +847,41 @@ neighbouring views (r 0.9 below 0.5 m). What is left is not a fusion rule:
 either the observation geometry (wide, continuous trajectories, which this
 data does not have and would need re-rendering), or the per-view predictor
 itself. That is the owner's decision; nothing further was started.
+
+## E104: the region each observation does well — azimuth is flat, elevation is everything
+
+**Why.** Catalogue prescriptions 1 (lobe assignment) and 2 (anisotropic
+uncertainty) both presuppose that an observation is reliable in some
+directions and not others. Pre-registered in
+`results/E100_cause/CRITERIA_E104_E106.md`: the lobe is real if the best and
+worst 30° azimuth bins differ in wrong rate by ≥ 0.15 on val; if not, the lobe
+ranking is not run. `src/lobe_measure.py`, `results/E104_lobe/<mode>_<split>.json`.
+
+| wrong rate (|err| > 0.2 m) by azimuth, 0° = forward, +30° steps to the right | 0 | 30 | 60 | 90 | 120 | 150 | 180 | 210 | 240 | 270 | 300 | 330 | max−min |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| r2 val | .33 | .34 | .28 | .26 | .34 | .39 | .35 | .39 | .35 | .30 | .32 | .32 | **0.129** |
+| r2 test | .31 | .31 | .29 | .28 | .32 | .36 | .37 | .37 | .32 | .29 | .30 | .31 | 0.088 |
+| r8 val | .28 | .31 | .26 | .26 | .30 | .31 | .27 | .32 | .31 | .29 | .30 | .29 | 0.064 |
+| r8 test | .27 | .28 | .29 | .27 | .30 | .33 | .31 | .30 | .30 | .28 | .30 | .27 | 0.058 |
+
+| wrong rate by elevation, bins centred at | −75° | −45° | −15° | +15° | +45° | +75° | max−min |
+|---|---|---|---|---|---|---|---|
+| r2 val / test | .09 / .05 | .45 / .36 | .64 / .68 | .54 / .58 | .15 / .14 | .03 / .02 | 0.61 / 0.66 |
+| r8 val / test | .08 / .06 | .39 / .32 | .56 / .62 | .48 / .52 | .14 / .12 | .02 / .02 | 0.54 / 0.59 |
+
+**Reading.** The azimuth lobe does not exist at the pre-registered size
+(0.13 on r2 val, 0.06 on r8), and where there is a tilt it is not the front
+that is best but the sides at ±60–90°, with the back worst — the binaural
+pair's *lateral* cue, not a frontal beam. So lobe assignment has no lobe to
+assign and the anisotropic-uncertainty prescription's precondition fails in
+azimuth. Elevation is the whole story: floor and ceiling are nearly always
+right (.02–.09), the horizon band is wrong two thirds of the time (.56–.68).
+That structure is shared by every observation (same height, same cue), so it
+does not create the between-view diversity a lobe scheme needs; it can only be
+used as a per-ray weight that is the same for every view. That weight
+(`elev_sum`, w = 1 − wrong_rate(elevation bin) from val) is run post hoc as a
+ranking beside support and reported below when it finishes; it is not
+pre-registered and is read as descriptive.
+
+[미확인]: the elevation curve after the ERP solid-angle correction (the
+catalogue's confound); the per-scene split.

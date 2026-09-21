@@ -67,6 +67,8 @@ def main() -> int:
     ap.add_argument("--temperature", type=float, default=0.0,
                     help="softmax temperature; 0 = the val-fitted value recorded by eval_posterior_rays")
     ap.add_argument("--tag", default="", help="suffix on the output directory, e.g. _v3")
+    ap.add_argument("--ref", choices=("subset", "fixed"), default="subset",
+                    help="reference: GT of the selected N steps (Stage A-D) or GT of every step of the sequence (E100 fix)")
     ap.add_argument("--band", choices=("interp", "whole"), default="interp",
                     help="band-mass rounding; 'whole' reproduces the old whole-bin behaviour for the ablation")
     ap.add_argument("--hop", type=int, default=160, help="must match the hop the point predictions were made with")
@@ -166,6 +168,11 @@ def main() -> int:
                     gbm = g_full[: (gh // H) * H, : (gw // W) * W].reshape(H, gh // H, W, gw // W).mean((1, 3))
                     sp_err_alt["corner11"].append(np.abs(arg - g11).ravel()[pick])
                     sp_err_alt["blockmean"].append(np.abs(arg - gbm).ravel()[pick])
+            ref_fixed = None
+            if a.ref == "fixed":
+                ref_fixed, _ = voxel_downsample(np.concatenate([
+                    unproject_res(resize_nearest(S.gt_depth(i, "face"), (H, W)), S.pose(i), dirs, a.max_depth, a.stride, "face")[0]
+                    for i in steps]), a.voxel / 2)
             for N in NS:
                 idx = subset(len(steps), N, 0)
                 refs, cl_A, cl_B, cf_B = [], [], [], []
@@ -176,7 +183,7 @@ def main() -> int:
                     cl_B.append(pb); cf_B.append(confs[j][::a.stride, ::a.stride][vb])
                     g = resize_nearest(S.gt_depth(steps[j], "face"), (H, W))
                     refs.append(unproject_res(g, pose, dirs, a.max_depth, a.stride, "face")[0])
-                ref, _ = voxel_downsample(np.concatenate(refs), a.voxel / 2)
+                ref = ref_fixed if ref_fixed is not None else voxel_downsample(np.concatenate(refs), a.voxel / 2)[0]
                 views = [ViewPosterior(cdfs[j], S.pose(steps[j])["position"], S.pose(steps[j])["rotation"],
                                        H, W, edges, space="face", rounding=a.band) for j in idx]
                 base_row = dict(scene=sc, seq=sq, N_req=(N if N > 0 else -1), N=len(idx))
@@ -244,7 +251,7 @@ def main() -> int:
     keys = ["method", "N_req", "frac"]
     num = [c for c in df.select_dtypes("number").columns if c not in keys]
     df.groupby(keys)[num].mean().to_csv(out / "aggregate.csv")
-    (out / "config.yaml").write_text(json.dumps({k: str(v) for k, v in vars(a).items()} | {"temperature_used": T}, indent=1))
+    (out / "config.yaml").write_text(json.dumps({k: str(v) for k, v in vars(a).items()} | {"temperature_used": T, "reference": a.ref}, indent=1))
     (out / "git_commit.txt").write_text(
         subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, cwd=REPO).stdout)
     # confidence versus error at the ray level: sparsification curve and its area
