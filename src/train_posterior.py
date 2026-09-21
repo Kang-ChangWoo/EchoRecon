@@ -49,6 +49,7 @@ def parse_args():
     p.add_argument("--label-width", type=float, default=1.0, help="soft label width in bins; 0 = one-hot")
     p.add_argument("--init", default="flat", choices=("flat", "warm"), help="head init: flat (all bins equal; the trained runs) or warm (bin-wise from the point head, issue A)")
     p.add_argument("--tau", type=float, default=0.3, help="warm-start width in logit space")
+    p.add_argument("--head-only", action="store_true", help="never unfreeze the backbone; best.pth is then chosen among head-only epochs")
     p.add_argument("--patience", type=int, default=0, help="stop when val KL has not improved for this many unfrozen epochs (0 = run all)")
     p.add_argument("--lambda-aux", type=float, default=0.0, help="weight of the auxiliary expected-depth L1 (<= 0.1)")
     p.add_argument("--epochs", type=int, default=20)
@@ -100,7 +101,7 @@ def main() -> int:
     hist, best, best_ep = [], float("inf"), -1
     t0 = time.time()
     for ep in range(a.epochs):
-        frozen = ep < a.warmup_epochs
+        frozen = (ep < a.warmup_epochs) or a.head_only
         for p in rest:
             p.requires_grad_(not frozen)
         model.train()
@@ -145,14 +146,14 @@ def main() -> int:
         print(f"[{ep:02d}{'F' if frozen else ' '}] train KL {rec['train_kl']:.4f}  val KL {rec['val_kl']:.4f}  "
               f"argmax MAE {rec['val_argmax_mae']:.3f} m  expected MAE {rec['val_expected_mae']:.3f} m  "
               f"{rec['minutes']:.1f} min", flush=True)
-        if rec["val_kl"] < best and not frozen:
+        if rec["val_kl"] < best and (not frozen or a.head_only):
             best = rec["val_kl"]; best_ep = ep
             torch.save({"state_dict": model.state_dict(), "args": vars(a) | {"base_args": ck["args"]},
                         "epoch": ep, "val": rec}, out / "best.pth")
         torch.save({"state_dict": model.state_dict(), "args": vars(a) | {"base_args": ck["args"]},
                     "epoch": ep, "val": rec}, out / "last.pth")
         (out / "history.json").write_text(json.dumps(hist, indent=1))
-        if a.patience and not frozen and ep - best_ep >= a.patience:
+        if a.patience and (not frozen or a.head_only) and best_ep >= 0 and ep - best_ep >= a.patience:
             print(f"early stop: no val KL improvement for {a.patience} epochs (best epoch {best_ep})", flush=True); break
     (out / "config.yaml").write_text(json.dumps({k: str(v) for k, v in vars(a).items()}, indent=1))
     (out / "git_commit.txt").write_text(
