@@ -417,7 +417,7 @@ should not set even the box. Both are fixed in the next run.
 > C_on_B 0.574/0.605/0.520, C_grid 0.587/0.594/0.512, D_conf_sum
 > 0.589/0.617/0.549, E_conf_filter50 0.424/0.473/0.400; r8 A_point
 > 0.614/0.651/0.590, C_grid 0.612/0.613/0.534, D_conf_sum 0.613/0.642/0.573.
-> The shape is unchanged from v2: every method falls from N=4 on. **[미검증 — head 수렴 전 비교: best epoch 2, flat init; issue A retrain pending]** The
+> The shape is unchanged from v2: every method falls from N=4 on. **[issue A: confirmed after the warm-start retrain, see "Issue A" below; head-only variant pending]** The
 > project's centre then moved to the cause decomposition below (E100), and the
 > retrained heads planned in HANDOFF.md were not run.
 
@@ -909,7 +909,7 @@ pre-registered and is read as descriptive.
 [미확인]: the elevation curve after the ERP solid-angle correction (the
 catalogue's confound); the per-scene split.
 
-## E105: the depth distribution under the fixed reference — no [미검증 — head 수렴 전 비교; issue A retrain pending]
+## E105: the depth distribution under the fixed reference — no [confirmed with the warm-start head, see Issue A]
 
 **Why.** Stage D's verdict on posterior fusion was reached under the moving
 reference. E105 is Stage D v3 re-run with `--ref fixed` (GT of every step),
@@ -948,7 +948,7 @@ The E-filter and its matched control collapse exactly as before (recall).
 views; under the corrected scoring it is the *only* family that still gets
 worse with N, because soft evidence spreads each view's wrong shell over a
 band and the bands of neighbouring, correlated views reinforce each other
-(E100 (c)). "Distribution" is closed on this data. **[미검증 — head 수렴 전 비교: best epoch 2, flat init; issue A retrain pending]**
+(E100 (c)). "Distribution" is closed on this data. **[issue A: confirmed after the warm-start retrain, see "Issue A" below; head-only variant pending]**
 
 ## E102b: distance-based view selection — count, not spacing
 
@@ -1072,3 +1072,59 @@ built; the fully-connected control it would need is the base model itself.
 head here is fitted on val, which is legitimate for a ranking but leaves the
 val scenes unavailable for anything else); the interaction with the
 retrained posterior head (issue A).
+
+## Issue A: the posterior head retrained from a bin-wise warm start — verdict unchanged
+
+**Why.** The trained heads started flat (every bin the same filter) and their
+best val-KL epoch was 2, so the owner asked that the flat start be broken, the
+head retrained to convergence, and the "posterior loses from N = 4" verdict
+withheld until then. Change: `PosteriorDepth(init="warm", tau=0.3)` sets
+weight_k = w_point · ζ_k / τ² and bias_k = (b_point · ζ_k − ζ_k² / 2) / τ² with
+ζ_k = logit(c_k / max_depth), i.e. the softmax is a Gaussian in logit space
+around the point head's own bin before any training (argmax within 0.017 m of
+the point depth at initialisation; bin width 0.077 m). Trainer: warm-up 2
+epochs head-only, then backbone lr 5e-5, head 1e-3, 20 epochs, early stop
+after 6 epochs without val-KL improvement, best epoch recorded
+(`outputs/posterior/posterior_{r2,r8}_warm/train_done.json`).
+
+| | r2 flat (trained run) | r2 warm | r8 flat | r8 warm |
+|---|---|---|---|---|
+| best epoch (val KL) / epochs run | 2 / 20 | **4** / 11 (early stop) | 2 / 20 | **2** / 9 (early stop) |
+| best val KL | 1.346 | 1.600 | 1.190 | 1.392 |
+| val KL after the best epoch | rises monotonically to 2.13 | rises (1.65 at ep 6) | rises to 1.60 by ep 9 | rises |
+| test, ray level: argmax MAE / wrong > 0.2 m | 0.246 / 26.5 % | 0.233 / 25.4 % | 0.209 / 23.7 % | 0.203 / 24.2 % |
+| NLL (fake Gaussian best) / ECE | 2.39 (3.33) / .154 | 2.49 (3.25) / .163 | 2.30 (3.14) / .163 | 2.46 (3.08) / .156 |
+| mode rescue@5 / mass ±0.2 m when wrong | 8.1 % / 18.9 % | 8.9 % / 18.9 % | 6.8 % / 20.3 % | 9.3 % / 21.3 % |
+| fitted temperature | 1.378 | 1.902 | 1.302 | 1.588 |
+
+Stage D v3 with the warm heads, test, kept fraction chosen on val, both
+references (`results/E30_stage_d/{r2,r8}_warm_v3[fixed]/compare.txt`):
+
+| F1@0.2, N = 1 / 4 / 16 / all | r2 flat | r2 warm | r8 flat | r8 warm |
+|---|---|---|---|---|
+| A_point (unchanged) | .572/.610/.574/.562 | same | .614/.651/.603/.590 | same |
+| B_argmax, subset ref | .576/.609/.570/.556 | .585/.615/.578/.564 | .604/.636/.586/.575 | .594/.634/.578/.570 |
+| C_on_B, subset ref | .574/.605/.537/.520 | .574/.604/.536/.518 | .589/.621/.564/.549 | .586/.610/.551/.538 |
+| C_grid, subset ref | .587/.594/.526/.512 | .589/.592/.528/.514 | .612/.613/.549/.534 | .605/.598/.537/.524 |
+| D_conf_sum, subset ref | .589/.617/.557/.549 | .594/.622/.568/.554 | .613/.642/.589/.573 | .605/.640/.581/.565 |
+| C_on_B, fixed ref | .435/.526/.527/.520 | .444/.526/.526/.518 | .465/.551/.553/.549 | .452/.548/.540/.538 |
+| C_grid, fixed ref | .460/.527/.516/.512 | .459/.522/.516/.514 | .492/.537/.537/.534 | .480/.529/.525/.524 |
+| A_point, fixed ref | .434/.551/.561/.562 | same | .468/.589/.596/.590 | same |
+
+**Reading.** (1) What changed: the initialisation, and nothing downstream.
+Every Stage D number moves by ≤ 0.01 (r2 B/D +0.005–0.01, r8 −0.005–0.013),
+the ray-level argmax improves by 0.006–0.013 m while NLL worsens by 0.1–0.16
+(the warm head is sharper and needs a higher temperature), rescue and mass
+stay at 8–9 % and 19–21 %. (2) Convergence: with the backbone trainable the
+val KL minimum sits at the first or second unfrozen epoch under both starts
+and both learning rates (2e-4 before, 5e-5 now) and rises afterwards while the
+train KL keeps falling — the head is not under-trained, the fine-tuned model
+over-fits the 12 training scenes; the warm start's minimum (1.60 / 1.39) is
+*higher* than the flat start's (1.35 / 1.19). A backbone-frozen head-only
+variant (30 epochs, `posterior_*_warm_headonly`) is running as the last
+convergence check; at epoch 14 its val KL is 1.62 and still creeping down.
+(3) Verdict: **by the owner's rule ("if it still loses at N ≥ 4 after the
+retrain, the limitation is confirmed") the limitation is confirmed**, subject
+only to the head-only run: C is below A by 0.04–0.05 at N = all under both
+references with both starts. The [미검증] tags above are replaced by this
+section.
