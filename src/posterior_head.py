@@ -55,14 +55,30 @@ class PosteriorDepth(nn.Module):
     """
 
     def __init__(self, base: nn.Module, K: int = 128, d_min: float = 0.1, d_max: float = 10.0,
-                 init_from_point_head: bool = True):
+                 init_from_point_head: bool = True, init: str = "flat", tau: float = 0.3):
         super().__init__()
         self.base = base
         self.K = K
         self.d_min = float(d_min); self.d_max = float(d_max)
         old = base.head
         new = nn.Conv2d(old.in_channels, K, old.kernel_size, old.stride, old.padding)
-        if init_from_point_head:
+        edges = torch.linspace(d_min, d_max, K + 1)
+        centres = 0.5 * (edges[:-1] + edges[1:])
+        if init == "warm":
+            # Bin-wise warm start from the point head (issue A). The point head emits
+            # z with depth = max_depth * sigmoid(z). Let zeta_k = logit(c_k / max_depth) be
+            # the z at which bin k is centred. With weight_k = w_old * zeta_k / tau^2 and
+            # bias_k = (b_old * zeta_k - zeta_k^2 / 2) / tau^2 the logits are
+            #     logit_k(z) = (zeta_k z - zeta_k^2 / 2) / tau^2 = -(z - zeta_k)^2 / (2 tau^2) + const(z),
+            # i.e. a softmax that is Gaussian in z around the bin the point head would
+            # have chosen, width tau in logit space (about 0.5 m at 2 m for tau 0.3).
+            # Every bin filter is different; the start carries the point head's answer.
+            md = float(getattr(base, "max_depth", 10.0))
+            zeta = torch.logit((centres / md).clamp(1e-3, 1 - 1e-3)).clamp(-6, 6)
+            with torch.no_grad():
+                new.weight.copy_(old.weight * (zeta / tau ** 2).view(K, 1, 1, 1))
+                new.bias.copy_((old.bias.view(1) * zeta - 0.5 * zeta ** 2) / tau ** 2)
+        elif init_from_point_head:
             # Every bin gets the same filter, so the logits are identical across
             # bins and the softmax is uniform on every ray. That is a flat start,
             # not a warm start: it carries no information about which bin the
@@ -73,9 +89,8 @@ class PosteriorDepth(nn.Module):
                 new.weight.copy_(old.weight.repeat(K, 1, 1, 1) * 0.1)
                 new.bias.zero_()
         self.base.head = new
-        edges = torch.linspace(d_min, d_max, K + 1)
         self.register_buffer("edges", edges)
-        self.register_buffer("centres", 0.5 * (edges[:-1] + edges[1:]))
+        self.register_buffer("centres", centres)
         self._patch_decode()
 
     def _patch_decode(self):

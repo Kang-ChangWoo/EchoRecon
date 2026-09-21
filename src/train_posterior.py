@@ -47,6 +47,9 @@ def parse_args():
     p.add_argument("--d-min", type=float, default=0.1)
     p.add_argument("--d-max", type=float, default=10.0)
     p.add_argument("--label-width", type=float, default=1.0, help="soft label width in bins; 0 = one-hot")
+    p.add_argument("--init", default="flat", choices=("flat", "warm"), help="head init: flat (all bins equal; the trained runs) or warm (bin-wise from the point head, issue A)")
+    p.add_argument("--tau", type=float, default=0.3, help="warm-start width in logit space")
+    p.add_argument("--patience", type=int, default=0, help="stop when val KL has not improved for this many unfrozen epochs (0 = run all)")
     p.add_argument("--lambda-aux", type=float, default=0.0, help="weight of the auxiliary expected-depth L1 (<= 0.1)")
     p.add_argument("--epochs", type=int, default=20)
     p.add_argument("--warmup-epochs", type=float, default=2.0, help="head only, backbone frozen")
@@ -75,7 +78,7 @@ def main() -> int:
     ck = torch.load(BASE_ROOT / CKPT[a.mode], map_location="cpu", weights_only=False)
     base, poses, DM = load_base(ck["args"])
     base.load_state_dict(ck["state_dict"])
-    model = PosteriorDepth(base, K=a.bins, d_min=a.d_min, d_max=a.d_max).to(dev)
+    model = PosteriorDepth(base, K=a.bins, d_min=a.d_min, d_max=a.d_max, init=a.init, tau=a.tau).to(dev)
     md = float(ck["args"].get("max_depth", 10.0))
 
     cwd = os.getcwd(); os.chdir(BASE_ROOT)
@@ -94,7 +97,7 @@ def main() -> int:
     steps_per_epoch = max(1, (a.limit_train or len(tr)) // a.accum)
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=a.epochs * steps_per_epoch)
     scaler = torch.amp.GradScaler("cuda")
-    hist, best = [], float("inf")
+    hist, best, best_ep = [], float("inf"), -1
     t0 = time.time()
     for ep in range(a.epochs):
         frozen = ep < a.warmup_epochs
@@ -143,16 +146,19 @@ def main() -> int:
               f"argmax MAE {rec['val_argmax_mae']:.3f} m  expected MAE {rec['val_expected_mae']:.3f} m  "
               f"{rec['minutes']:.1f} min", flush=True)
         if rec["val_kl"] < best and not frozen:
-            best = rec["val_kl"]
+            best = rec["val_kl"]; best_ep = ep
             torch.save({"state_dict": model.state_dict(), "args": vars(a) | {"base_args": ck["args"]},
                         "epoch": ep, "val": rec}, out / "best.pth")
         torch.save({"state_dict": model.state_dict(), "args": vars(a) | {"base_args": ck["args"]},
                     "epoch": ep, "val": rec}, out / "last.pth")
         (out / "history.json").write_text(json.dumps(hist, indent=1))
+        if a.patience and not frozen and ep - best_ep >= a.patience:
+            print(f"early stop: no val KL improvement for {a.patience} epochs (best epoch {best_ep})", flush=True); break
     (out / "config.yaml").write_text(json.dumps({k: str(v) for k, v in vars(a).items()}, indent=1))
     (out / "git_commit.txt").write_text(
         subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, cwd=REPO).stdout)
-    print(f"done in {(time.time()-t0)/60:.1f} min, best val KL {best:.4f} -> {out}")
+    (out / "train_done.json").write_text(json.dumps({"best_val_kl": best, "best_epoch": best_ep, "epochs_run": len(hist)}, indent=1))
+    print(f"done in {(time.time()-t0)/60:.1f} min, best val KL {best:.4f} at epoch {best_ep} -> {out}")
     return 0
 
 

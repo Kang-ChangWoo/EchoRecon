@@ -225,10 +225,10 @@ def one_sequence(job):
         err_all.append(ev); errc_all.append(ev - ev.mean()); view_all.append(np.full(len(ev), k))
     keys_all = np.concatenate(keys_all); err_all = np.concatenate(err_all); errc_all = np.concatenate(errc_all); view_all = np.concatenate(view_all)
     # one (voxel, view) entry: mean error of that view's rays in the voxel
-    kv = keys_all * 64 + view_all
+    kv = keys_all * 4096 + view_all
     ukv, inv = np.unique(kv, return_inverse=True); inv = inv.ravel()
     cnt = np.bincount(inv); me = np.bincount(inv, weights=err_all) / cnt; mec = np.bincount(inv, weights=errc_all) / cnt
-    uk = ukv // 64; uv = ukv % 64
+    uk = ukv // 4096; uv = ukv % 4096
     # consecutive entries with the same voxel key: pair the first with each later one
     same_prev = np.flatnonzero(uk[1:] == uk[:-1]) + 1
     # walk back to the first entry of each run
@@ -298,8 +298,8 @@ def one_sequence(job):
                 # support s = number of distinct views with a point in the voxel (the ranking
                 # keeps the Stage A point count, s is for the contradiction rule and the spread bins)
                 view_of_pt = np.concatenate([np.full(len(clouds[var][j]), j) for j in idx])
-                pv = np.unique(inv.astype(np.int64) * 64 + view_of_pt)
-                s = np.bincount(pv // 64, minlength=len(uk_v))
+                pv = np.unique(inv.astype(np.int64) * 4096 + view_of_pt)
+                s = np.bincount(pv // 4096, minlength=len(uk_v))
                 # (b) viewing-angle spread per voxel: dispersion of the unit vectors from the
                 # contributing views' origins to the voxel centre
                 dv = pos[inv] - origins[view_of_pt]; dv /= np.maximum(np.linalg.norm(dv, axis=1, keepdims=True), 1e-9)
