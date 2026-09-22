@@ -417,7 +417,7 @@ should not set even the box. Both are fixed in the next run.
 > C_on_B 0.574/0.605/0.520, C_grid 0.587/0.594/0.512, D_conf_sum
 > 0.589/0.617/0.549, E_conf_filter50 0.424/0.473/0.400; r8 A_point
 > 0.614/0.651/0.590, C_grid 0.612/0.613/0.534, D_conf_sum 0.613/0.642/0.573.
-> The shape is unchanged from v2: every method falls from N=4 on. **[issue A: confirmed after the warm-start retrain, see "Issue A" below; head-only variant pending]** The
+> The shape is unchanged from v2: every method falls from N=4 on. **[issue A: confirmed after the warm-start and head-only retrains, see "Issue A" below]** The
 > project's centre then moved to the cause decomposition below (E100), and the
 > retrained heads planned in HANDOFF.md were not run.
 
@@ -909,7 +909,7 @@ pre-registered and is read as descriptive.
 [미확인]: the elevation curve after the ERP solid-angle correction (the
 catalogue's confound); the per-scene split.
 
-## E105: the depth distribution under the fixed reference — no [confirmed with the warm-start head, see Issue A]
+## E105: the depth distribution under the fixed reference — no [confirmed with the warm-start and head-only heads, see Issue A]
 
 **Why.** Stage D's verdict on posterior fusion was reached under the moving
 reference. E105 is Stage D v3 re-run with `--ref fixed` (GT of every step),
@@ -948,7 +948,7 @@ The E-filter and its matched control collapse exactly as before (recall).
 views; under the corrected scoring it is the *only* family that still gets
 worse with N, because soft evidence spreads each view's wrong shell over a
 band and the bands of neighbouring, correlated views reinforce each other
-(E100 (c)). "Distribution" is closed on this data. **[issue A: confirmed after the warm-start retrain, see "Issue A" below; head-only variant pending]**
+(E100 (c)). "Distribution" is closed on this data. **[issue A: confirmed after the warm-start and head-only retrains, see "Issue A" below]**
 
 ## E102b: distance-based view selection — count, not spacing
 
@@ -1120,11 +1120,29 @@ val KL minimum sits at the first or second unfrozen epoch under both starts
 and both learning rates (2e-4 before, 5e-5 now) and rises afterwards while the
 train KL keeps falling — the head is not under-trained, the fine-tuned model
 over-fits the 12 training scenes; the warm start's minimum (1.60 / 1.39) is
-*higher* than the flat start's (1.35 / 1.19). A backbone-frozen head-only
-variant (30 epochs, `posterior_*_warm_headonly`) is running as the last
-convergence check; at epoch 14 its val KL is 1.62 and still creeping down.
-(3) Verdict: **by the owner's rule ("if it still loses at N ≥ 4 after the
-retrain, the limitation is confirmed") the limitation is confirmed**, subject
-only to the head-only run: C is below A by 0.04–0.05 at N = all under both
-references with both starts. The [미검증] tags above are replaced by this
-section.
+*higher* than the flat start's (1.35 / 1.19). (3) The backbone-frozen head-only variant (`posterior_*_warm_headonly`,
+warm start, head lr 1e-3, up to 30 epochs, early stop 6; r8 needed batch 2
+after an OOM at batch 4, GPU chosen by free memory):
+
+| head-only variant | r2 | r8 |
+|---|---|---|
+| best epoch / epochs run / best val KL | 8 / 15 / 1.612 | 12 / 19 / 1.379 |
+| test rays: argmax MAE / wrong / NLL / ECE | 0.251 / 30.0 % / 2.71 / .231 | 0.219 / 27.6 % / 2.56 / .187 |
+| mode rescue@5 / mass ±0.2 m when wrong | 21.9 % / 20.3 % | 25.0 % / 22.4 % |
+| Stage D, subset ref, B / C_on_B / C_grid / D at N = all | .512 / .492 / .488 / .501 (flat .556 / .520 / .512 / .549) | .534 / .523 / .515 / .532 (flat .575 / .549 / .534 / .573) |
+| Stage D, fixed ref, B / C_on_B / C_grid at N = all (A .562 / .590) | .512 / .492 / .488 | .534 / .523 / .515 |
+| Stage D, fixed ref, C_on_B at N = 4 / 16 | .499 / .499 | .533 / .526 |
+
+Freezing the backbone converges later (epochs 8 / 12) to a *worse* head on
+every axis except mode rescue (22–25 %, which crosses the "yes" line of
+`CRITERIA.md` for the first time, at the price of 3–4 points more wrong
+argmaxes and 0.04 lower 3-D F1): its point estimate is 0.02–0.04 F1 below
+the fine-tuned heads and every posterior fusion is below A by 0.06–0.07 at
+N = all. (4) Verdict: **by the owner's rule ("if it still loses at N ≥ 4
+after the retrain, the limitation is confirmed") the limitation is
+confirmed** with all three heads (flat, warm, warm head-only) on both
+observation sets and both references: C is below A by 0.04–0.07 at N = all
+and never within the band at N ≥ 4. The [미검증] tags above are replaced by
+this section. Result files: `results/E30_stage_d/{r2,r8}_warm_headonly_v3*/compare.txt`,
+`results/E21_posterior_rays/*_warm_headonly_test.json`,
+`outputs/posterior/*_warm_headonly/train_done.json`.
