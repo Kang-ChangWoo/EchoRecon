@@ -1,0 +1,70 @@
+| run | directory | commit | temperature | band | frac chosen on |
+|---|---|---|---|---|---|
+| r2_v3 | results/E30_stage_d/r2_v3 | b5611cd | 1.378 | interp | r2_v3_val |
+| r2_warm_v3 | results/E30_stage_d/r2_warm_v3 | 43c9b2c | 1.902 | interp | r2_warm_v3_val |
+| r2_warm_headonly_v3 | results/E30_stage_d/r2_warm_headonly_v3 | a93a1e1 | 1.448 | interp | r2_warm_headonly_v3_val |
+
+f1@0.2, test; columns = view count; one sub-column per run in the order given
+
+| method | N | r2_v3 | r2_warm_v3 | r2_warm_headonly_v3 |
+|---|---|---|---|---|
+| A_point | 1 | 0.572 | 0.572 | 0.572 |
+| A_point | 2 | 0.600 | 0.600 | 0.600 |
+| A_point | 4 | 0.610 | 0.610 | 0.610 |
+| A_point | 8 | 0.592 | 0.592 | 0.592 |
+| A_point | 16 | 0.574 | 0.574 | 0.574 |
+| A_point | all | 0.562 | 0.562 | 0.562 |
+| B_argmax | 1 | 0.576 | 0.585 | 0.530 |
+| B_argmax | 2 | 0.600 | 0.608 | 0.571 |
+| B_argmax | 4 | 0.609 | 0.615 | 0.571 |
+| B_argmax | 8 | 0.596 | 0.603 | 0.543 |
+| B_argmax | 16 | 0.570 | 0.578 | 0.523 |
+| B_argmax | all | 0.556 | 0.564 | 0.512 |
+| C_on_B | 1 | 0.574 | 0.574 | 0.532 |
+| C_on_B | 2 | 0.602 | 0.604 | 0.577 |
+| C_on_B | 4 | 0.605 | 0.604 | 0.574 |
+| C_on_B | 8 | 0.570 | 0.568 | 0.537 |
+| C_on_B | 16 | 0.537 | 0.536 | 0.508 |
+| C_on_B | all | 0.520 | 0.518 | 0.492 |
+| C_grid | 1 | 0.587 | 0.589 | 0.568 |
+| C_grid | 2 | 0.611 | 0.605 | 0.589 |
+| C_grid | 4 | 0.594 | 0.592 | 0.573 |
+| C_grid | 8 | 0.558 | 0.557 | 0.534 |
+| C_grid | 16 | 0.526 | 0.528 | 0.503 |
+| C_grid | all | 0.512 | 0.514 | 0.488 |
+| D_conf_sum | 1 | 0.589 | 0.594 | 0.531 |
+| D_conf_sum | 2 | 0.613 | 0.620 | 0.576 |
+| D_conf_sum | 4 | 0.617 | 0.622 | 0.573 |
+| D_conf_sum | 8 | 0.590 | 0.593 | 0.543 |
+| D_conf_sum | 16 | 0.557 | 0.568 | 0.515 |
+| D_conf_sum | all | 0.549 | 0.554 | 0.501 |
+| E_conf_filter50 | 1 | 0.424 | 0.448 | 0.514 |
+| E_conf_filter50 | 2 | 0.449 | 0.469 | 0.544 |
+| E_conf_filter50 | 4 | 0.473 | 0.489 | 0.560 |
+| E_conf_filter50 | 8 | 0.443 | 0.460 | 0.526 |
+| E_conf_filter50 | 16 | 0.412 | 0.430 | 0.493 |
+| E_conf_filter50 | all | 0.400 | 0.418 | 0.477 |
+| B_argmax_matchE50 | 1 | 0.502 | 0.518 | 0.509 |
+| B_argmax_matchE50 | 2 | 0.526 | 0.549 | 0.549 |
+| B_argmax_matchE50 | 4 | 0.553 | 0.575 | 0.561 |
+| B_argmax_matchE50 | 8 | 0.523 | 0.544 | 0.533 |
+| B_argmax_matchE50 | 16 | 0.490 | 0.513 | 0.514 |
+| B_argmax_matchE50 | all | 0.476 | 0.499 | 0.505 |
+| E_conf_filter75 | 1 | 0.268 | 0.253 | 0.441 |
+| E_conf_filter75 | 2 | 0.285 | 0.265 | 0.445 |
+| E_conf_filter75 | 4 | 0.320 | 0.303 | 0.497 |
+| E_conf_filter75 | 8 | 0.293 | 0.280 | 0.473 |
+| E_conf_filter75 | 16 | 0.268 | 0.258 | 0.447 |
+| E_conf_filter75 | all | 0.258 | 0.250 | 0.435 |
+| B_argmax_matchE75 | 1 | 0.316 | 0.339 | 0.421 |
+| B_argmax_matchE75 | 2 | 0.337 | 0.357 | 0.444 |
+| B_argmax_matchE75 | 4 | 0.378 | 0.411 | 0.491 |
+| B_argmax_matchE75 | 8 | 0.350 | 0.383 | 0.464 |
+| B_argmax_matchE75 | 16 | 0.325 | 0.353 | 0.444 |
+| B_argmax_matchE75 | all | 0.316 | 0.342 | 0.436 |
+| oracle | 1 | 0.719 | 0.710 | 0.702 |
+| oracle | 2 | 0.770 | 0.775 | 0.782 |
+| oracle | 4 | 0.834 | 0.842 | 0.840 |
+| oracle | 8 | 0.859 | 0.864 | 0.853 |
+| oracle | 16 | 0.867 | 0.874 | 0.856 |
+| oracle | all | 0.861 | 0.871 | 0.850 |
