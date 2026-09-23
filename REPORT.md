@@ -9,6 +9,101 @@
 > trained base model / head as they were; it is not a statement about the
 > method.
 
+## Final summary (as of 2026-09-23, commits 69102f2 → 4494151)
+
+**Question the project set out with.** Why does acoustic multi-view
+reconstruction get *worse* the more views are fused (F1@0.2 peaking at N = 4
+and falling to N = all), and which single cause, once fixed, turns the curve
+around.
+
+**Headline verdicts** (test scenes, 39 sequences, both observation sets r2 /
+r8, pre-registered rules, band 0.03 F1, paired bootstrap CIs; every number
+has a result file named in its section).
+
+1. **The falling curve was the scoring, not the physics** (E100 (e)). The
+   reference grew with N (GT of the selected views, n_ref ×1.57 at N = 16).
+   With a fixed reference (GT of every step) and the support ranking that was
+   already in the repository (top 25 % by point count), **F1 rises
+   monotonically to N = 16 and saturates**: r2 .306 / .513 / .561 / .562, r8
+   .329 / .533 / .587 / .590 at N = 1 / 4 / 16 / all (drop16 −0.048 / −0.054,
+   every scene, every subset seed). At the all-voxel operating point a fall of
+   0.034 / 0.037 remains, at the band edge and scene-dependent; precision falls
+   with N at every operating point (.51 → .35) while recall rises — the sign
+   of F1 is decided by which side is limiting.
+2. **None of the five pre-registered causes is a lever** (E100): front-end
+   window (4 retrains, 128 / 64 / 400 samples at hop 32, r2 and r8: every
+   curve and every measurement within 0.03 of the released model, single-view
+   MAE −0.003 to +0.013); angular diversity (real, r ≈ 0.9 error correlation
+   between views < 0.5 m apart vs 0.4 beyond 1.5 m, but not removable on
+   straight fixed-heading trajectories; r2 → r8 no effect); ray
+   independence (same-plane r 0.93; plane smoothing +0.003); free-space
+   contradiction (contra1 +0.036 / +0.039, but the support ranking at the same
+   voxel count is better by 0.030–0.039).
+3. **No geometric or confidence statistic of the fused cloud beats point
+   counting** (E102, E103, E104, E102b): distinct views +0.004 / +0.006,
+   Δ-spaced cells ≤ +0.003 and worse for Δ ≥ 1 m, span −0.017, summed
+   per-ray confidence −0.005 / −0.008, mean confidence −0.05, elevation
+   weighting −0.002, distance-based view selection vs a random subset of the
+   same count +0.009 to +0.021. The oracle ranking on the same voxels reaches
+   0.86; the information that separates right from wrong voxels is not in
+   the fused geometry.
+4. **The depth distribution does not restore the value of extra views**
+   (Stage D v3, E105, issue A). Under both references and with three heads
+   (flat start, bin-wise warm start, warm head-only; best epochs 2 / 4 / 8–12,
+   val KL minimum always at the first unfrozen epochs, over-fitting afterwards)
+   the posterior fusions sit 0.04–0.07 below the point pipeline at N = all and
+   still fall with N when the point pipeline no longer does. Confirmed as a
+   limitation by the owner's rule after the retrains.
+5. **The confidence paradox is measured** (E107): the per-view median
+   confidence filter deletes 82 % / 80 % of the *correct* voxels — 100 % of
+   those beyond 4 m, 93–95 % of the oblique ones, 85–98 % of the mid-range
+   ones; recall beyond 4 m drops to 0.000. The low-confidence half of the rays
+   carries the far field; confidence is high only where geometry is easy
+   (near, off-horizon), so spent as a filter it deletes the room, spent as a
+   weight it re-ranks nothing (E103). This is the direct evidence for
+   *representing* rather than *discarding* uncertainty.
+6. **The one thing that clears the bar is a learned prior on where the
+   single-view predictor is right** (E106): an MLP on per-voxel aggregates,
+   trained on the val scenes, used as a ranking on test: **+0.037 / +0.037 F1
+   over support at N = all** (CIs clear of 0, all scenes positive), no
+   confidence needed. The ablation puts the gain in the single-view group
+   (elevation, range: +0.031 / +0.021; `range_min` alone worth 0.26 AUROC)
+   and the between-view group inside the band (+0.018 / +0.023, AUROC .70 vs
+   count .69). **The bipartite-graph premise is therefore not supported on
+   this data**; the lobe premise is not either (azimuth wrong-rate spread
+   0.13 / 0.06 < 0.15, elevation spread 0.6 but shared by all views).
+7. **Marginal views** (E101, corrected for the k ↔ distance confound found by
+   the owner: within-k Spearman +0.06 / +0.04 instead of +0.40): an added view
+   is .7–.85 precise where it overlaps an earlier one and .2–.5 where it is
+   alone; *late* views are worse, not *near* views; the wrong remainder is
+   near misses, 0.5–1 m displacements and > 1 m hallucinations in equal
+   thirds.
+
+**What the paper can now claim.** The corrected view-count curve rises and
+saturates at F1 0.56 / 0.59 (precision ≈ 0.6, recall ≈ 0.54, oracle 0.86);
+the saturation is a property of the per-view prediction — its wrong third is
+shared by neighbouring views and is not separable by any fusion-side
+statistic — and the one lever that moves it is learned uncertainty inside the
+2-D model used as a ranking, never as a filter, because the uncertain rays are
+the only source of everything beyond 2–4 m.
+
+**Limits and open items.** (i) The fixed reference is still the fused GT of
+the same trajectory (E80 mesh reference not built). (ii) Trajectories are
+straight with fixed heading and 0.15 m steps; the re-render with wide,
+continuous trajectories that E100 (b) calls for could not be run here (no
+habitat-sim on this machine; render host needs the owner's SSH key). (iii)
+E106's learner is fitted on the val scenes; a train-scene version and its
+interaction with the retrained heads are [미확인]. (iv) The support-top-25 %
+reading was the secondary number in `CRITERIA.md`; at the primary all-voxel
+point (e) recovered 0.022, below the band — both are reported. (v) The first
+(a) prediction pass was invalid (checkpoint lacked the STFT args) and was
+redone; the E101 H1 rule did not control k; the E106 ablation and the E100
+budget-matched control were added after first reads — each is labelled as
+such where it appears. (vi) Stage A/B/D "v2" numbers have a provenance
+mismatch and are superseded by v3.
+
+---
+
 Accumulated per stage: hypothesis, what was implemented, the result, how it is
 read, what failed, and the next experiment. Numbers are means over the 39
 held-out sequences of the three test scenes unless stated otherwise. Every
