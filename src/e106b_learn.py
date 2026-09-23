@@ -75,16 +75,19 @@ def main() -> int:
     ap.add_argument("--mode", default="r2"); ap.add_argument("--frac", type=float, default=0.25)
     ap.add_argument("--eval", nargs="+", default=None, help="test feature stems to read at the val-chosen config (default <mode>_test)")
     ap.add_argument("--fit", default="train", choices=("train", "val"))
+    ap.add_argument("--feats-fixed", default=None, choices=(None, "all", "noconf"), help="restrict the grid to one feature set (E111: ranker without / with the head's aggregates)")
+    ap.add_argument("--tag", default="", help="suffix on the result directory")
     a = ap.parse_args()
     device = "cuda" if torch.cuda.is_available() else "cpu"
     rows_fit, feats = load(f"{a.mode}_{a.fit}"); rows_val, _ = load(f"{a.mode}_val")
     X = np.concatenate([r["X"] for r in rows_fit]); y = np.concatenate([r["y"] for r in rows_fit]).astype(np.float64)
     Xp = prep(X, feats); mu, sd = Xp.mean(0), Xp.std(0) + 1e-9; Xn = (Xp - mu) / sd
     yv = np.concatenate([r["y"] for r in rows_val])
-    od = REPO / "results" / "E106b_trainfit" / a.mode; od.mkdir(parents=True, exist_ok=True)
+    od = REPO / "results" / "E106b_trainfit" / f"{a.mode}{a.tag}"; od.mkdir(parents=True, exist_ok=True)
     lines = [f"# E106b {a.mode}: fit on {a.fit} scenes ({len(rows_fit)} (seq,N) rows, {len(y)} voxels, positive rate {y.mean():.3f}); val {len(rows_val)} rows, {len(yv)} voxels, positive rate {yv.mean():.3f}"]
     refs = {}; grid_res = []
-    for h, e, f in GRID:
+    grid = [g for g in GRID if a.feats_fixed is None or g[2] == a.feats_fixed]
+    for h, e, f in grid:
         sel = [i for i, ff in enumerate(feats) if f == "all" or not ff.startswith("conf")]
         net = train_mlp(Xn[:, sel], y, h, e, device)
         dv = evaluate(net, rows_val, feats, sel, mu, sd, a.frac, device, refs); gt = gain_table(dv)

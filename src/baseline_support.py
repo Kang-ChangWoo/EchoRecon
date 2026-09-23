@@ -99,6 +99,12 @@ def one_sequence(job):
                 scores["conf_sum"] = csum
                 scores["conf_mean"] = csum / cnt + 1e-6 * cnt
             base = dict(scene=sc, seq=sq, n_steps=T, N_req=(N if N > 0 else -1), N=len(idx), seed=seed, n_vox=nv)
+            if a.get("bins"):
+                from scipy.spatial import cKDTree as _KD
+                _rr = np.linalg.norm(ref_fixed[:, None, :] - origins[idx][None, :, :], axis=2).min(1); _rbin = np.digitize(_rr, [2, 4])
+                _nref = np.bincount(_rbin, minlength=3)
+                _vr = np.linalg.norm(pos[:, None, :] - origins[idx][None, :, :], axis=2).min(1); _vbin = np.digitize(_vr, [2, 4])
+                _verr, _ = _KD(ref_fixed).query(pos, k=1, workers=1)
             for name, sc_ in scores.items():
                 order = np.argsort(-sc_, kind="stable")
                 for fr in FRACS:
@@ -107,6 +113,10 @@ def one_sequence(job):
                     keep = order[: max(1, int(fr * nv))]
                     for rn, ref in refs.items():
                         m = metrics(pos[keep], ref, voxel=voxel)
+                        if a.get("bins") and rn == "fixed":
+                            dk_, _ = _KD(pos[keep]).query(ref_fixed, k=1, workers=1); hit = np.bincount(_rbin, weights=dk_ < 0.2, minlength=3)
+                            kb = np.bincount(_vbin[keep], minlength=3); kc = np.bincount(_vbin[keep], weights=_verr[keep] < 0.2, minlength=3)
+                            m.update({f"recall_r{b}": float(hit[b] / max(_nref[b], 1)) for b in range(3)}, **{f"prec_r{b}": float(kc[b] / max(kb[b], 1)) for b in range(3)}, **{f"kept_r{b}": int(kb[b]) for b in range(3)}, **{f"nref_r{b}": int(_nref[b]) for b in range(3)})
                         rows.append({**base, "ranking": name, "frac": fr, "ref": rn, **m})
             if C is not None:
                 # per-view median-confidence filter before voxelising (Stage D's E50), and the
@@ -134,6 +144,7 @@ def main() -> int:
     ap.add_argument("--seeds", type=int, default=3)
     ap.add_argument("--workers", type=int, default=24)
     ap.add_argument("--tag", default="")
+    ap.add_argument("--bins", action="store_true", help="add recall of the fixed reference and precision of the kept voxels by range bin {<2, 2-4, >=4 m}")
     ap.add_argument("--elev-weights", default=None, help="E104 post-hoc: results/E104_lobe/<mode>_val.json; adds the elev_sum ranking")
     ap.add_argument("--out", type=Path, default=REPO / "results" / "E102_baseline_support")
     a = ap.parse_args()
