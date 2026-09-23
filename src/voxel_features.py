@@ -22,7 +22,7 @@ HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
 sys.path.insert(0, str(HERE))
 from cause_decomp import pack, voxelize  # noqa: E402
-from data import TEST_SCENES, VAL_SCENES, Sequence, sequences  # noqa: E402
+from data import TEST_SCENES, VAL_SCENES, Sequence, sequences, scenes as all_scenes  # noqa: E402
 from erp import quat_to_R, ray_dirs, to_radial  # noqa: E402
 from eval_fusion import resize_nearest  # noqa: E402
 from stage_a import subset  # noqa: E402
@@ -100,7 +100,8 @@ def main() -> int:
     ap.add_argument("--convention", default="right0"); ap.add_argument("--workers", type=int, default=20)
     a = ap.parse_args(); a.pred_dir = a.pred_dir or str(REPO / "outputs" / "pred" / f"{a.mode}_post")
     CFG.update(vars(a))
-    scenes = TEST_SCENES if a.split == "test" else VAL_SCENES
+    held = list(TEST_SCENES) + list(VAL_SCENES)
+    scenes = {"test": list(TEST_SCENES), "val": list(VAL_SCENES), "train": [x for x in all_scenes() if x not in held]}[a.split]
     jobs = [(sc, sq) for sc in scenes for sq in sequences(sc)]
     out = REPO / "results" / "E106_learned" / "features"; out.mkdir(parents=True, exist_ok=True)
     t0 = time.time(); allrows = []
