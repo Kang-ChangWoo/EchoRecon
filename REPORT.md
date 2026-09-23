@@ -81,7 +81,12 @@ has a result file named in its section).
    alone; *late* views are worse, not *near* views; the wrong remainder is
    near misses, 0.5–1 m displacements and > 1 m hallucinations in equal
    thirds.
-8. **The path-structure and far-field levers are null** (E108–E110, owner's
+8. **A per-ray reliability head inside the 2-D model (plan A, E111) does
+   not carry the ranker's gain**: its ranking is 0.02 below counting, adding
+   its outputs to the E106b ranker changes it by +0.001, and its far-field
+   points lie under the E110 curve; joint fine-tuning over-fits as before.
+   The prior is a cross-view, post-fusion object on this data.
+9. **The path-structure and far-field levers are null** (E108–E110, owner's
    second direction): normalising votes by the geometrically expected ray
    count lifts far-field recall (.05 → .42) but lowers F1 by 0.08–0.10 (even
    with GT visibility, −0.18) because the far predictions are wrong, not
@@ -1427,3 +1432,62 @@ oracle. Limit (iii) is closed; what remains is that the learner ranks voxels
 *after* fusion from aggregates of ray geometry — the natural next step is to
 move the same information inside the 2-D model as a per-ray head, which is a
 design change and is not started here.
+
+## E111 (plan A): a per-ray reliability head inside the 2-D model — negative against the pre-registered bars
+
+**Why.** E106b's post-fusion ranker (+0.050 / +0.054) showed the information
+exists; E108 showed the far field is wrong in the predictions. Plan A moves
+the information into the model: a reliability head on the decoder features,
+given the model's own depth and the pixel elevation explicitly, trained with
+BCE on 1[|d̂ − d| < 0.2 m]; head-only (frozen base) and joint (base fine-tuned,
+L1 + BCE) variants, r2 and r8, 12 train scenes, val for selection.
+Pre-registered bars in `CRITERIA_E111.md`: (1) beat the E106b ranker by
+≥ 0.03; (2) additivity with the ranker; (3) far-bin P/R above the E110 curve;
+(4) distribution-shift record. Code `src/reliability_head.py`,
+`src/train_reliability.py`, `src/e111_chain.sh`; checkpoints
+`/root/local1/changwoo/echorecon_ckpt/reliability_*`; results
+`results/E111_reliability/`, `results/E106b_trainfit/*_rel_*`.
+
+**Training.** Ray-level target positive rate on the train scenes .826 (r2) /
+.866 (r8), on val .723 / .768 — the same direction of shift as E106b's voxel
+labels (train .39 / .45, val .30 / .36, test .32 / .36 for the fused voxels).
+Head-only: best val BCE .458 / .467 at epoch 1, val AUROC .84–.85, early stop
+at 8. Joint: as soon as the backbone is unfrozen (epoch 2) val BCE rises
+(.46 → .51–.54) and val depth MAE worsens (.254 → .28 on r2), so the joint
+runs' best checkpoints *are* the epoch-1 head-only weights (identical
+numbers below) — fine-tuning the backbone on 12 scenes over-fits, as it did
+for the posterior head (issue A).
+
+| fixed ref, N = all | r2 | r8 |
+|---|---|---|
+| count (baseline), top 25 % | .561 | .590 |
+| head ranking Σ r, top 25 % (val chose Σ r at frac .50) | .540, −0.021 [−.029, −.013] | .570, −0.020 [−.027, −.013] |
+| head ranking Σ r at the val-chosen frac .50 (vs count at .50) | .544 vs .545, −0.002 | .581 vs .585, −0.004 |
+| **E106b ranker refit on this cloud, without the head's aggregates** | **.620, +0.059 [+.051, +.068]** | **.633, +0.043 [+.033, +.055]** |
+| E106b ranker **with** the head's aggregates (Σ r, mean r, min/max r) | .621, +0.060 [+.050, +.071] | .634, +0.044 [+.033, +.057] |
+| voxel-level AUROC on test: mean r / Σ r / count | .655 / .703 / .698 | .644 / .706 / .703 |
+| far bin ≥ 4 m, frac .50: recall → precision, count vs Σ r | .207 → .276 vs .129 → .321 (E110 curve at those recalls .46 / .52) | .239 → .254 vs .150 → .290 (curve .47 / .53) |
+| far bin, frac .25: count vs Σ r | .037 → .471 vs .003 → .240 | .034 → .370 vs .004 → .214 |
+
+**Verdicts.** (1) **Fails**: the head's own ranking is 0.02 below counting
+and 0.08 below the ranker it was meant to replace. (2) **Redundant**: adding
+the head's aggregates to the ranker changes it by +0.001 on both sets — the
+same information moved, not new information. (3) **Below the curve**: the
+head lowers far-field recall relative to counting at every fraction (it
+ranks near, frontal rays first, as every per-ray confidence in this project
+has) and its far-bin points sit 0.19–0.34 under the E110 precision–recall
+curve. (4) Shift recorded above; no test–val anomaly (test AUROC ≥ val).
+
+**Reading.** A per-ray head learns what a per-ray head can see — how far
+and at what elevation *this* ray landed — and at the voxel level that is
+already what the count encodes (AUROC .70 either way), which is exactly the
+E103 result with a differently trained confidence. The ranker's extra 0.05
+comes from *cross-view* aggregates of ray geometry (the nearest view's range
+to the voxel, the number of agreeing views, their spread) that exist only
+after fusion; a head that scores rays one at a time cannot form them, and
+giving its outputs to the ranker adds nothing because the ranker already has
+the ray geometry. Internalising the prior therefore requires either
+(a) a head that sees the *other* views (multi-view input at the 2-D stage,
+i.e. a change of the model's interface), or (b) accepting that the prior is
+a fusion-level object and making the ranker the method. Both are design
+decisions; neither is started here.

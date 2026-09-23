@@ -1,0 +1,8 @@
+{
+ "best_val_bce": 0.45756722067217204,
+ "best_epoch": 1,
+ "epochs_run": 8,
+ "train_pos_rate": 0.8257910313571027,
+ "ckpt": "/root/local1/changwoo/echorecon_ckpt/reliability_r2_headonly/best.pth",
+ "git": "cf3b632dddb8f52a50864689fba08c7795079ee8"
+}

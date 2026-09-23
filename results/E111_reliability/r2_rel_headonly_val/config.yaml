@@ -1,0 +1,15 @@
+{
+ "mode": "r2",
+ "pred_dir": "outputs/pred/r2_rel_headonly",
+ "split": "val",
+ "voxel": "0.1",
+ "stride": "2",
+ "max_depth": "10.0",
+ "convention": "right0",
+ "seeds": "3",
+ "workers": "16",
+ "tag": "_rel_headonly",
+ "bins": "True",
+ "elev_weights": "None",
+ "out": "results/E111_reliability"
+}
