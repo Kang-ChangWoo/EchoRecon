@@ -1241,3 +1241,47 @@ and never within the band at N ≥ 4. The [미검증] tags above are replaced by
 this section. Result files: `results/E30_stage_d/{r2,r8}_warm_headonly_v3*/compare.txt`,
 `results/E21_posterior_rays/*_warm_headonly_test.json`,
 `outputs/posterior/*_warm_headonly/train_done.json`.
+
+## E110: top-k candidates per ray — between point and distribution, no better than either end
+
+**Why.** Owner's item (3): keep the k highest-mass local modes of each ray's
+posterior instead of one point (k = 1) or the whole distribution (Stage D C).
+Pre-registered in `CRITERIA_E108_E110.md`; flat heads (T from E21), k ∈ {1, 2,
+3, 5}, rankings `topk_count` (rays whose top-k contains the voxel) and
+`topk_mass` (summed 3-bin mode mass); k and fraction chosen on val; control
+B_argmax on its own voxels. `src/posterior_predict.py --topk 5`,
+`src/topk_fusion.py`, `results/E110_topk/{r2,r8}/`. The top-k passes for the
+warm and head-only heads are stored (`outputs/pred/*_{warm,warm_headonly}_post_topk`)
+for later extension; the verdict is on the flat head.
+
+| fixed ref, N = all | kept fraction | r2 F1 (P / R) | r2 recall ≥ 4 m | r8 F1 (P / R) | r8 recall ≥ 4 m | candidates |
+|---|---|---|---|---|---|---|
+| B_argmax (point) | .25 | .554 (.576/.541) | .083 | .573 (.623/.535) | .060 | 86 k / 77 k |
+| B_argmax | .50 | .536 (.453/.664) | .215 | .569 (.502/.664) | .197 | |
+| topk_count, k = 1 | .25 | .555 | .084 | .573 | .062 | 86 k |
+| topk_mass, k = 1 | .25 | .550 (.597/.514) | .024 | .566 (.641/.510) | .009 | 86 k |
+| topk_mass, k = 2 | .10 (≈ 31 k voxels) | .546 (.517/.582) | .078 | .578 (.581/.579) | .067 | 308 k / 265 k |
+| topk_mass, k = 2 | .25 (≈ 77 k) | .478 (.348/.774) | .417 | .520 (.403/.743) | .346 | |
+| topk_mass, k = 3 | .10 | .517 (.413/.698) | .270 | .557 (.465/.701) | .264 | 527 k / 480 k |
+| topk_mass, k = 5 | .10 / .25 | .464 / .284 | .462 / .749 | .487 / .279 | .416 / .651 | 834 k / 793 k |
+| topk_count, k = 2 / 3 / 5 | .10 | .410 / .327 / .236 | | .455 / .342 / .237 | | |
+
+Val chooses k = 1 in both families (gain vs B_argmax at N = all: count
++0.001 / −0.000, mass −0.005 / −0.007, all inside the band); if the fraction
+is also free, val's best top-k member (mass, k = 2, frac .10) is still below
+B_argmax's best (r2 .544 vs .554, r8 .578 vs .580 on val; test .546 vs .554,
+.578 vs .573). Note that the kept fraction is of a candidate set that grows
+with k (86 k → 308 k → 527 k → 834 k voxels), so the rows are compared by
+kept *count*: topk_mass k = 2 at frac .10 (≈ 31 k voxels) sits between
+B_argmax at frac .25 (21 k) and .50 (43 k) in F1 and below both in far
+recall.
+
+**Reading.** Keeping more than one candidate per ray moves along the
+precision–recall curve rather than above it: every extra mode adds recall
+(far-field recall .08 → .42 → .75 for k = 1 → 2 → 5 at frac .25) at a steeper
+loss of precision (.58 → .35 → .17), and at any matched budget F1 is at best
+equal to the point estimate. The second mode is real geometry often enough
+to lift recall but not often enough to be ranked above the first modes of
+other rays — the same asymmetry as E107 seen from the other side. Verdict
+**no effect** on both sets; the family interpolates smoothly to Stage D's
+full-distribution result (E105) as k grows.

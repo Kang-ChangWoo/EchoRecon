@@ -1,0 +1,11 @@
+=== E110_topk r2: 39 test sequences, val yes, baseline B_argmax, frac 0.25
+B_argmax               F1 N=1/2/4/8/16/all 0.322/0.437/0.520/0.547/0.557/0.554 | slope(all-4) +0.034 | recall by range [0.906 0.465 0.083] by incidence [0.554 0.617 0.436]
+val choice per family: topk_count: topk_count1, topk_mass: topk_mass1
+
+## test, fixed ref, frac 0.25: gain vs B_argmax at N=all [CI], N=4, slope difference, curve, recall by range / incidence (N=all)
+topk_count1            gain(all) +0.001 CI[+0.000,+0.001] no effect   | gain(4) +0.000 | slope diff +0.000 - | F1 0.323/0.439/0.521/0.548/0.557/0.555 | P/R(all) 0.575/0.542 | recall range [0.906 0.467 0.084] inc [0.555 0.618 0.438] | apartment_2:-0.000, frl_apartment_5:+0.001, office_4:-0.000
+topk_mass1             gain(all) -0.005 CI[-0.011,+0.001] no effect   | gain(4) -0.013 | slope diff +0.008 - | F1 0.303/0.422/0.508/0.537/0.549/0.550 | P/R(all) 0.597/0.514 | recall range [0.901 0.436 0.024] inc [0.53  0.602 0.391] | apartment_2:+0.018, frl_apartment_5:-0.018, office_4:-0.010
+
+## subset ref, frac 0.25: gain at N=all, curve
+topk_count1            gain(all) +0.001 CI[+0.000,+0.001] | F1 0.558/0.615/0.569/0.555 (base 0.614/0.554 at 4/all)
+topk_mass1             gain(all) -0.005 CI[-0.011,+0.001] | F1 0.553/0.610/0.562/0.550 (base 0.614/0.554 at 4/all)
