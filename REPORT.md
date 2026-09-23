@@ -1285,3 +1285,91 @@ to lift recall but not often enough to be ranked above the first modes of
 other rays — the same asymmetry as E107 seen from the other side. Verdict
 **no effect** on both sets; the family interpolates smoothly to Stage D's
 full-distribution result (E105) as k grows.
+
+## E108: expected-observation-count normalisation — lifts the far field, lowers F1
+
+**Why.** Owner's item (1): far and oblique surfaces receive structurally few
+rays, so a raw-count threshold drops them (E107: recall beyond 4 m 0.000 after
+the confidence filter, 0.05–0.08 at the top quarter by count). Normalise the
+vote by the number of rays the geometry would deliver if a surface were there:
+E(c) = Σ_j vis(c, j)·A / (r_j²·Δω(φ_j)) with the ERP pixel solid angle at the
+working stride; visibility from the *predicted* surface (deployable, "pred")
+and from the GT surface (diagnostic upper bound, "gt"); and a smoothing
+approximation (count / Gaussian-smoothed point density, σ on val). Rankings at
+the top quarter and thresholds (rate ≥ t, t on val) against the count at the
+same kept number. Pre-registered in `CRITERIA_E108_E110.md`;
+`src/continuity_fusion.py`, `results/E108_E109_continuity/{r2,r8}/table_frac0.25.txt`.
+
+| fixed ref, N = all, top 25 % | r2 F1 (P / R) | r2 recall <2 / 2–4 / ≥4 m | r2 Δ vs count [CI] | r8 F1 (P / R) | r8 recall by range | r8 Δ [CI] |
+|---|---|---|---|---|---|---|
+| count (baseline) | .561 (.595/.537) | .895 / .478 / **.051** | | .590 (.650/.545) | .900 / .497 / .043 | |
+| rate, predicted visibility (E_min .5, val) | .457 (.367/.616) | .733 / .616 / **.417** | −0.104 [−.123, −.085] | .503 (.422/.631) | .769 / .620 / .398 | −0.087 [−.108, −.065] |
+| rate, GT visibility (upper bound) | .353 (.297/.443) | .702 / .385 / .144 | −0.207 [−.244, −.170] | .410 (.360/.481) | .746 / .428 / .157 | −0.180 |
+| rate, smoothed density (σ 1.0, val) | .482 (.416/.584) | .752 / .531 / .413 | −0.079 [−.100, −.058] | .504 (.456/.575) | .749 / .528 / .381 | −0.086 |
+| threshold t = 0.1 (val) vs count at the same 52.7 k / 48.7 k voxels | .490 vs .525 | .900/.740/**.481** vs .945/.712/.341 | −0.036 [−.043, −.028] | .529 vs .565 | .904/.722/.455 vs .950/.704/.347 | −0.036 |
+| smoothed, thresholded, same count | .476 vs .475 | .956/.773/.488 vs .956/.772/.485 | +0.000 | .515 vs .515 | | +0.000 |
+
+Per scene the ranking loss is uniform (r2 −0.11 / −0.09 / −0.11; r8 −0.13 /
+−0.08 / −0.05). The curves: rate_pred F1 .264/.352/.426/.454/.460/.457
+(r2, N = 1 … all) against count .302/.426/.511/.541/.558/.561; the GT-visibility
+version *falls* with N (.458 at N = 4 → .353) because it promotes exactly the
+distant voxels that every added view fills with a wrong shell.
+
+**Reading.** The normalisation does what it was built to do — the far bin's
+recall rises from .05 to .42 (ranking) or from .34 to .48 (threshold, same
+count) — and F1 drops by 0.08–0.10 because the far votes it promotes are
+mostly wrong: at ≥ 4 m the predicted voxels are .15–.25 precise (E107 table)
+against .70–.77 near and frontal, so every far voxel admitted costs more
+precision than its recall is worth. The diagnostic makes the point sharper:
+even with GT visibility the rate ranking is 0.18–0.21 below counting. The
+far field is not missing for lack of votes; **it is missing because the
+predictor is wrong there**, and no re-weighting of votes can supply what the
+predictions do not contain. The smoothed-density version at matched count is
+exactly neutral (+0.000), i.e. local density normalisation removes nothing and
+adds nothing. Verdict **worse** on both sets for the ranking, **no effect** for
+the smoothed threshold; the targeted quantity (far recall) is reported as
+achieved at the cost stated.
+
+## E109: continuity-aware accumulation — three variants, none moves the curve
+
+**Why.** Owner's item (2): the observations are consecutive along a path, and
+neighbouring views share their errors (E100 (c): r .88 at < 0.5 m, .73 at
+0.5–1.5 m, .41 beyond 1.5 m), so independent accumulation over-counts. Three
+variants, ρ(d) fixed from those measurements (owner's choice), plus the same
+accumulations with ρ(d) = exp(−d/λ), λ on val, as a diagnostic of *form* vs
+*idea*: (a) baseline-weighted votes (weight 1 − ρ to the previous voter);
+(b) votes confirmed by a trajectory neighbour (± 1 or ± 2 steps of the
+subset, val → ± 2); (c) recursive log-odds, +a vote / −b free-space traversal
+with the (1 − ρ) discount, (a, b) on val → (1, 0.5). Key question: does the
+top-quarter slope F1(all) − F1(4) steepen by ≥ 0.03 together with a ≥ 0.03
+gain at N = all. `src/continuity_fusion.py`, same result files as E108.
+
+| fixed ref, top 25 % | r2 F1 N = 1/2/4/8/16/all | r2 Δ(all) [CI] | slope Δ | r8 F1 | r8 Δ(all) [CI] | slope Δ |
+|---|---|---|---|---|---|---|
+| count (baseline) | .302/.426/.511/.541/.558/.561 | | (+.050) | .327/.447/.532/.568/.586/.590 | | (+.058) |
+| (a) baseline-weighted, ρ measured | .302/.435/.524/.552/.557/.555 | −0.006 [−.016, +.004] | −.019 | .327/.455/.542/.571/.582/.581 | −0.008 [−.020, +.004] | −.018 |
+| (a) with exp(−d/λ), λ = 0.3 (val) | .302/.435/.524/.551/.557/.558 | −0.002 [−.011, +.007] | −.015 | .327/.455/.542/.571/.586/.588 | −0.001 [−.011, +.009] | −.011 |
+| (b) neighbour-confirmed, ± 2 (val) | .302/.384/.491/.544/.562/.565 | +0.004 [−.001, +.010] | +.024 | .327/.402/.521/.571/.594/.595 | +0.005 [−.001, +.012] | +.016 |
+| (c) recursive log-odds, (1, 0.5) (val) | .303/.395/.459/.506/.549/.552 | −0.008 [−.021, +.004] | +.043 | .330/.426/.487/.536/.583/.586 | −0.004 [−.016, +.009] | +.041 |
+| (c) with exp(−d/λ), λ = 1.5 (val) | .303/.398/.486/.527/.547/.546 | −0.014 [−.028, −.000] | +.010 | .330/.427/.511/.564/.587/.584 | −0.005 [−.021, +.010] | +.015 |
+| subset ref, Δ(all): (a) / (b) / (c) | −0.006 / +0.004 / −0.008 | | | −0.008 / +0.005 / −0.004 | | |
+
+Far-bin recall at N = all (≥ 4 m): count .051 / .043; (a) .171 / .159; (b)
+.119 / .112; (c) .244 / .223 — the continuity variants admit more distant
+voxels than counting (they down-weight the many near-duplicate near votes),
+and pay for it in precision (.553–.587 vs .595 on r2), which is why F1 does
+not move.
+
+**Reading.** All six accumulations are inside the band on both sets and
+both references (−0.014 … +0.005), and the two ρ forms give the same answer
+(measured vs exp-λ within 0.01), so the null is about the idea, not the
+functional form. Variant (c) steepens the curve (+0.04 slope) only by
+starting lower at N = 4 (its free-space term punishes early views); it ends
+where the count ends. The headline as originally stated ("more views do not
+help") was already broken by the reference fix in E100 — the top-quarter
+count curve rises by +0.050 / +0.058 from N = 4 to all — and **using the
+continuity does not steepen it further**: correlated neighbours are already
+harmless under counting because the top quarter is selected by *how many*
+views agree, and neighbours that agree with each other agree with the far
+ones too. Verdict: no effect; the sequential structure is not a lever on
+this data either.

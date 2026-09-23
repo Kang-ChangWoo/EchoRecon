@@ -1,0 +1,31 @@
+=== E108_E109_continuity r2: 39 test sequences, val yes, baseline count, frac 0.25
+count                  F1 N=1/2/4/8/16/all 0.302/0.426/0.511/0.541/0.558/0.561 | slope(all-4) +0.050 | recall by range [0.895 0.478 0.051] by incidence [0.548 0.609 0.435]
+val choice per family: rate_geo_pred: rate_geo_pred0.5, rate_geo_gt: rate_geo_gt2.0, rate_smooth: rate_smooth1.0, cont_a: cont_a, cont_b: cont_b2, cont_c: cont_c1.0_0.5, cont_a_exp: cont_a_exp0.3, cont_c_exp: cont_c_exp1.5
+
+## test, fixed ref, frac 0.25: gain vs count at N=all [CI], N=4, slope difference, curve, recall by range / incidence (N=all)
+rate_geo_pred0.5       gain(all) -0.104 CI[-0.123,-0.085] worse       | gain(4) -0.085 | slope diff -0.019 - | F1 0.264/0.352/0.426/0.454/0.460/0.457 | P/R(all) 0.367/0.616 | recall range [0.733 0.616 0.417] inc [0.681 0.651 0.509] | apartment_2:-0.113, frl_apartment_5:-0.091, office_4:-0.109
+rate_geo_gt2.0         gain(all) -0.207 CI[-0.244,-0.170] worse       | gain(4) -0.053 | slope diff -0.155 - | F1 0.356/0.451/0.458/0.402/0.367/0.353 | P/R(all) 0.297/0.443 | recall range [0.702 0.385 0.144] inc [0.47  0.471 0.399] | apartment_2:-0.068, frl_apartment_5:-0.225, office_4:-0.326
+rate_smooth1.0         gain(all) -0.079 CI[-0.100,-0.058] worse       | gain(4) -0.082 | slope diff +0.003 - | F1 0.231/0.351/0.429/0.462/0.479/0.482 | P/R(all) 0.416/0.584 | recall range [0.752 0.531 0.413] inc [0.675 0.596 0.488] | apartment_2:-0.130, frl_apartment_5:-0.071, office_4:-0.037
+cont_a                 gain(all) -0.006 CI[-0.016,+0.004] no effect   | gain(4) +0.013 | slope diff -0.019 - | F1 0.302/0.435/0.524/0.552/0.557/0.555 | P/R(all) 0.553/0.564 | recall range [0.853 0.516 0.171] inc [0.576 0.601 0.506] | apartment_2:-0.027, frl_apartment_5:-0.002, office_4:+0.009
+cont_b2                gain(all) +0.004 CI[-0.001,+0.010] no effect   | gain(4) -0.020 | slope diff +0.024 - | F1 0.302/0.384/0.491/0.544/0.562/0.565 | P/R(all) 0.587/0.551 | recall range [0.859 0.507 0.119] inc [0.562 0.608 0.471] | apartment_2:-0.003, frl_apartment_5:+0.004, office_4:+0.012
+cont_c1.0_0.5          gain(all) -0.008 CI[-0.021,+0.004] no effect   | gain(4) -0.051 | slope diff +0.043 - | F1 0.303/0.395/0.459/0.506/0.549/0.552 | P/R(all) 0.541/0.570 | recall range [0.77  0.563 0.244] inc [0.6   0.616 0.482] | apartment_2:-0.015, frl_apartment_5:-0.008, office_4:-0.003
+cont_a_exp0.3          gain(all) -0.002 CI[-0.011,+0.007] no effect   | gain(4) +0.013 | slope diff -0.015 - | F1 0.302/0.435/0.524/0.551/0.557/0.558 | P/R(all) 0.563/0.562 | recall range [0.853 0.519 0.158] inc [0.571 0.606 0.501] | apartment_2:-0.016, frl_apartment_5:-0.000, office_4:+0.009
+cont_c_exp1.5          gain(all) -0.014 CI[-0.028,-0.000] no effect   | gain(4) -0.025 | slope diff +0.010 - | F1 0.303/0.398/0.486/0.527/0.547/0.546 | P/R(all) 0.534/0.565 | recall range [0.72  0.575 0.274] inc [0.598 0.608 0.473] | apartment_2:-0.012, frl_apartment_5:-0.025, office_4:-0.004
+
+## subset ref, frac 0.25: gain at N=all, curve
+rate_geo_pred0.5       gain(all) -0.104 CI[-0.123,-0.085] | F1 0.303/0.447/0.463/0.457 (base 0.609/0.561 at 4/all)
+rate_geo_gt2.0         gain(all) -0.207 CI[-0.244,-0.170] | F1 0.519/0.505/0.371/0.353 (base 0.609/0.561 at 4/all)
+rate_smooth1.0         gain(all) -0.079 CI[-0.100,-0.058] | F1 0.262/0.455/0.482/0.482 (base 0.609/0.561 at 4/all)
+cont_a                 gain(all) -0.006 CI[-0.016,+0.004] | F1 0.541/0.607/0.566/0.555 (base 0.609/0.561 at 4/all)
+cont_b2                gain(all) +0.004 CI[-0.001,+0.010] | F1 0.541/0.568/0.573/0.565 (base 0.609/0.561 at 4/all)
+cont_c1.0_0.5          gain(all) -0.008 CI[-0.021,+0.004] | F1 0.542/0.514/0.557/0.552 (base 0.609/0.561 at 4/all)
+cont_a_exp0.3          gain(all) -0.002 CI[-0.011,+0.007] | F1 0.541/0.606/0.567/0.558 (base 0.609/0.561 at 4/all)
+cont_c_exp1.5          gain(all) -0.014 CI[-0.028,-0.000] | F1 0.542/0.543/0.555/0.546 (base 0.609/0.561 at 4/all)
+
+## thresholded rates (val-chosen t) vs count at the same kept count, fixed ref, N=all
+rate_geo_pred0.5       t=0.1: kept 52668 voxels; F1 0.490 vs count-same-count 0.525 | gain -0.036 CI[-0.043,-0.028] | recall range [0.9   0.74  0.481] vs [0.945 0.712 0.341]
+rate_geo_pred1.0       t=0.1: kept 52668 voxels; F1 0.490 vs count-same-count 0.525 | gain -0.036 CI[-0.043,-0.028] | recall range [0.9   0.74  0.481] vs [0.945 0.712 0.341]
+rate_geo_pred2.0       t=0.1: kept 52668 voxels; F1 0.490 vs count-same-count 0.525 | gain -0.036 CI[-0.043,-0.028] | recall range [0.9   0.74  0.481] vs [0.945 0.712 0.341]
+rate_smooth0.3         t=0.1: kept 82630 voxels; F1 0.473 vs count-same-count 0.477 | gain -0.004 CI[-0.005,-0.002] | recall range [0.955 0.773 0.488] vs [0.956 0.77  0.469]
+rate_smooth0.5         t=0.1: kept 82918 voxels; F1 0.475 vs count-same-count 0.476 | gain -0.002 CI[-0.003,-0.000] | recall range [0.955 0.773 0.488] vs [0.956 0.771 0.472]
+rate_smooth1.0         t=0.1: kept 83865 voxels; F1 0.476 vs count-same-count 0.475 | gain +0.000 CI[-0.000,+0.001] | recall range [0.956 0.773 0.488] vs [0.956 0.772 0.485]
