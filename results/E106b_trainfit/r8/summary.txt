@@ -1,0 +1,20 @@
+# E106b r8: fit on train scenes (302 (seq,N) rows, 12526042 voxels, positive rate 0.479); val 72 rows, 3482361 voxels, positive rate 0.392
+grid hidden  32 epochs 20 feats all   : val gain +0.033 (F1 0.613 vs support 0.580, AUROC 0.779)
+grid hidden  32 epochs 20 feats noconf: val gain +0.039 (F1 0.618 vs support 0.580, AUROC 0.769)
+grid hidden  32 epochs 40 feats all   : val gain +0.035 (F1 0.615 vs support 0.580, AUROC 0.779)
+grid hidden  32 epochs 40 feats noconf: val gain +0.038 (F1 0.618 vs support 0.580, AUROC 0.769)
+grid hidden  64 epochs 20 feats all   : val gain +0.034 (F1 0.614 vs support 0.580, AUROC 0.775)
+grid hidden  64 epochs 20 feats noconf: val gain +0.042 (F1 0.622 vs support 0.580, AUROC 0.768)
+grid hidden  64 epochs 40 feats all   : val gain +0.038 (F1 0.618 vs support 0.580, AUROC 0.778)
+grid hidden  64 epochs 40 feats noconf: val gain +0.042 (F1 0.622 vs support 0.580, AUROC 0.770)
+grid hidden 128 epochs 20 feats all   : val gain +0.038 (F1 0.617 vs support 0.580, AUROC 0.778)
+grid hidden 128 epochs 20 feats noconf: val gain +0.039 (F1 0.619 vs support 0.580, AUROC 0.765)
+grid hidden 128 epochs 40 feats all   : val gain +0.044 (F1 0.624 vs support 0.580, AUROC 0.779)
+grid hidden 128 epochs 40 feats noconf: val gain +0.042 (F1 0.622 vs support 0.580, AUROC 0.767)
+val choice: {'hidden': 128, 'epochs': 40, 'feats': 'all', 'val_gain': 0.04425199386016349, 'val_f1': 0.6240629844934735, 'val_auroc': 0.7790998808759393}
+TEST r8_test                    N=all: learner F1 0.627 (P 0.743 R 0.548) vs support 0.573 | gain +0.054 CI[+0.044,+0.065] | AUROC 0.790 vs 0.690 | per scene apartment_2:+0.040±0.015, frl_apartment_5:+0.077±0.038, office_4:+0.040±0.021
+TEST r8_test                    N=  4: learner F1 0.563 (P 0.832 R 0.427) vs support 0.528 | gain +0.035 CI[+0.025,+0.045] | AUROC 0.800 vs 0.671 | per scene apartment_2:+0.002±0.019, frl_apartment_5:+0.064±0.020, office_4:+0.033±0.020
+TEST r8_warm_test               N=all: learner F1 0.600 (P 0.712 R 0.524) vs support 0.569 | gain +0.031 CI[+0.021,+0.040] | AUROC 0.777 vs 0.686 | per scene apartment_2:+0.037±0.010, frl_apartment_5:+0.038±0.040, office_4:+0.014±0.026
+TEST r8_warm_test               N=  4: learner F1 0.526 (P 0.819 R 0.389) vs support 0.523 | gain +0.003 CI[-0.006,+0.012] | AUROC 0.786 vs 0.670 | per scene apartment_2:-0.009±0.027, frl_apartment_5:+0.019±0.026, office_4:-0.006±0.025
+TEST r8_warm_headonly_test      N=all: learner F1 0.587 (P 0.652 R 0.539) vs support 0.541 | gain +0.046 CI[+0.037,+0.055] | AUROC 0.743 vs 0.660 | per scene apartment_2:+0.069±0.018, frl_apartment_5:+0.036±0.031, office_4:+0.037±0.025
+TEST r8_warm_headonly_test      N=  4: learner F1 0.517 (P 0.771 R 0.391) vs support 0.488 | gain +0.029 CI[+0.023,+0.036] | AUROC 0.766 vs 0.673 | per scene apartment_2:+0.019±0.013, frl_apartment_5:+0.039±0.022, office_4:+0.028±0.020

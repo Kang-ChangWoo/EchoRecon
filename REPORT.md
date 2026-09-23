@@ -63,9 +63,12 @@ has a result file named in its section).
    weight it re-ranks nothing (E103). This is the direct evidence for
    *representing* rather than *discarding* uncertainty.
 6. **The one thing that clears the bar is a learned prior on where the
-   single-view predictor is right** (E106): an MLP on per-voxel aggregates,
-   trained on the val scenes, used as a ranking on test: **+0.037 / +0.037 F1
-   over support at N = all** (CIs clear of 0, all scenes positive), no
+   single-view predictor is right** (E106, E106b): an MLP on per-voxel
+   aggregates used as a ranking: fitted on the val scenes **+0.037 / +0.037**,
+   fitted on the train scenes with val for the hyper-parameters **+0.050 /
+   +0.054 F1 over support at N = all** (F1 .605 / .627; CIs clear of 0, all
+   scenes positive, +0.03 at N = 4), transfers unchanged to the retrained
+   heads (+0.03 to +0.06) and reaches .625 when refitted per head; no
    confidence needed. The ablation puts the gain in the single-view group
    (elevation, range: +0.031 / +0.021; `range_min` alone worth 0.26 AUROC)
    and the between-view group inside the band (+0.018 / +0.023, AUROC .70 vs
@@ -78,6 +81,17 @@ has a result file named in its section).
    alone; *late* views are worse, not *near* views; the wrong remainder is
    near misses, 0.5–1 m displacements and > 1 m hallucinations in equal
    thirds.
+8. **The path-structure and far-field levers are null** (E108–E110, owner's
+   second direction): normalising votes by the geometrically expected ray
+   count lifts far-field recall (.05 → .42) but lowers F1 by 0.08–0.10 (even
+   with GT visibility, −0.18) because the far predictions are wrong, not
+   under-voted; continuity-aware accumulation (baseline weights, neighbour
+   confirmation, recursive log-odds; measured or exponential ρ) stays within
+   ±0.014 of counting and does not steepen the curve; top-k candidates per
+   ray move along the precision–recall curve and never exceed the point
+   estimate at matched budget. Distance-based view selection equals a random
+   subset of the same count (E102b); the confidence filter deletes the room
+   beyond 2–4 m (E107).
 
 **What the paper can now claim.** The corrected view-count curve rises and
 saturates at F1 0.56 / 0.59 (precision ≈ 0.6, recall ≈ 0.54, oracle 0.86);
@@ -92,8 +106,8 @@ the same trajectory (E80 mesh reference not built). (ii) Trajectories are
 straight with fixed heading and 0.15 m steps; the re-render with wide,
 continuous trajectories that E100 (b) calls for could not be run here (no
 habitat-sim on this machine; render host needs the owner's SSH key). (iii)
-E106's learner is fitted on the val scenes; a train-scene version and its
-interaction with the retrained heads are [미확인]. (iv) The support-top-25 %
+closed by E106b: the train-scene learner is stronger than the val-scene one
+and carries to the retrained heads; the learner is still a post-fusion ranker. (iv) The support-top-25 %
 reading was the secondary number in `CRITERIA.md`; at the primary all-voxel
 point (e) recovered 0.022, below the band — both are reported. (v) The first
 (a) prediction pass was invalid (checkpoint lacked the STFT args) and was
@@ -1373,3 +1387,43 @@ harmless under counting because the top quarter is selected by *how many*
 views agree, and neighbours that agree with each other agree with the far
 ones too. Verdict: no effect; the sequential structure is not a lever on
 this data either.
+
+## E106b: the learned per-voxel prior fitted on the train scenes, and carried to the retrained heads
+
+**Why.** Limit (iii) of the summary: E106's learner was fitted on the val
+scenes. Here it is fitted on the 12 **train** scenes' predictions (151
+sequences, 12.5–14.3 M voxels), with val used only to choose the
+hyper-parameters (hidden {32, 64, 128} × epochs {20, 40} × features {all,
+no-confidence}; chosen by val gain at N = all, top quarter, fixed reference),
+and read once on test. The chosen flat-head learner is then applied
+*unchanged* to the warm and head-only heads' test voxels (transfer), and each
+of those heads also gets its own learner fitted on its own train-scene
+predictions (refit). `src/e106b_learn.py`, `results/E106b_trainfit/<set>/summary.txt`.
+Caveat recorded: the base model was trained on these scenes, so its
+predictions there are more often right (positive rate .42–.48 on train vs
+.32–.39 on val); the learner still transfers.
+
+| fixed ref, top 25 %, F1@0.2, gain vs count [CI], N = all (N = 4) | r2 | r8 |
+|---|---|---|
+| val-fit learner (E106, for reference) | +0.037 | +0.037 |
+| **train-fit learner on the flat head** (val choice: 128 / 40 / no-conf ; 128 / 40 / all) | **.605 vs .554, +0.050 [+.044, +.057]** (N = 4: +0.029) | **.627 vs .573, +0.054 [+.044, +.065]** (N = 4: +0.035) |
+| per scene, N = all | apt2 +.044, frl5 +.062, off4 +.042 | +.040, +.077, +.040 |
+| AUROC learner vs count | .777 vs .692 | .790 vs .690 |
+| transfer to the warm head (same learner) | .614 vs .563, +0.052 [+.045, +.058] | .600 vs .569, +0.031 [+.021, +.040] |
+| transfer to the head-only head | .574 vs .510, +0.063 [+.057, +.070] | .587 vs .541, +0.046 [+.037, +.055] |
+| refit on the warm head's own train predictions | .625 vs .563, +0.062 [+.055, +.070] | .624 vs .569, +0.055 [+.047, +.064] |
+| refit on the head-only head's | .598 vs .510, +0.088 [+.079, +.096] | .622 vs .541, +0.082 [+.072, +.093] |
+
+**Reading.** Fitting on the train scenes does not weaken the effect — it
+strengthens it (+0.050 / +0.054 against +0.037 / +0.037), the CIs are clear
+of the band on both sets, every scene is positive, and the gain survives at
+N = 4 (+0.03). The same learner carries to heads it never saw (+0.03 to
++0.06), and a per-head refit recovers most of what the poorer heads lose: the
+head-only head, 0.04–0.05 below the flat head under counting, ends within
+0.01–0.03 of it under its own learner (.598 / .622). The highest F1 reached
+anywhere in this work at the top-quarter operating point is now 0.625–0.627
+(r2 warm refit, r8 flat), against 0.56 / 0.59 for counting and 0.86 for the
+oracle. Limit (iii) is closed; what remains is that the learner ranks voxels
+*after* fusion from aggregates of ray geometry — the natural next step is to
+move the same information inside the 2-D model as a per-ray head, which is a
+design change and is not started here.
